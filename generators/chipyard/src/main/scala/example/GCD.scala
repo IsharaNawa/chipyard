@@ -11,35 +11,39 @@ import freechips.rocketchip.regmapper.{HasRegMap, RegField}
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.util.UIntIsOneOf
 
+// this is needed as part of using TLRegisterRouter or AXI4RegisterRouter
 // DOC include start: GCD params
 case class GCDParams(
-  address: BigInt = 0x4000,
-  width: Int = 32,
-  useAXI4: Boolean = false,
-  useBlackBox: Boolean = true)
+  address: BigInt = 0x4000, // address of the peripheral
+  width: Int = 32,          // width of the peripheral
+  useAXI4: Boolean = false, // useAXI4 or tileLink
+  useBlackBox: Boolean = true)  // use the blackbox, i.e. verilog code?
 // DOC include end: GCD params
 
 // DOC include start: GCD key
 case object GCDKey extends Field[Option[GCDParams]](None)
 // DOC include end: GCD key
 
+// io of the actual hardware implementation module
 class GCDIO(val w: Int) extends Bundle {
-  val clock = Input(Clock())
-  val reset = Input(Bool())
-  val input_ready = Output(Bool())
-  val input_valid = Input(Bool())
-  val x = Input(UInt(w.W))
-  val y = Input(UInt(w.W))
-  val output_ready = Input(Bool())
-  val output_valid = Output(Bool())
-  val gcd = Output(UInt(w.W))
-  val busy = Output(Bool())
+  val clock = Input(Clock())  // Clock signal – drives the internal state machine
+  val reset = Input(Bool())   // 	Asynchronous or synchronous reset
+  val input_ready = Output(Bool())  // GCD module says: "I'm ready to accept a new (x, y) input pair"
+  val input_valid = Input(Bool())   // Producer (e.g., MMIO wrapper) says: "inputs x and y are valid and ready to be used"
+  val x = Input(UInt(w.W))  // number 1 for GCD calculation
+  val y = Input(UInt(w.W))  // number 2 for GCD calculation
+  val output_ready = Input(Bool())  // Consumer (e.g., MMIO wrapper) says: "I’m ready to receive the GCD result"
+  val output_valid = Output(Bool()) // GCD module says: "I’ve computed the result and it’s valid"
+  val gcd = Output(UInt(w.W))  // output of the GCD calculation
+  val busy = Output(Bool())    // Indicates the GCD unit is currently processing a request
 }
 
+// IO port of the TopModule
 trait GCDTopIO extends Bundle {
   val gcd_busy = Output(Bool())
 }
 
+// IO ports of the inner module who actually has the hardware logic
 trait HasGCDIO extends BaseModule {
   val w: Int
   val io = IO(new GCDIO(w))
@@ -54,9 +58,13 @@ class GCDMMIOBlackBox(val w: Int) extends BlackBox(Map("WIDTH" -> IntParam(w))) 
 // DOC include end: GCD blackbox
 
 // DOC include start: GCD chisel
+// actual hardware implementation
+// according to the eucledian algorithm
 class GCDMMIOChiselModule(val w: Int) extends Module
   with HasGCDIO
 {
+  // calculates the GCD using euclidean algorithm
+
   val s_idle :: s_run :: s_done :: Nil = Enum(3)
 
   val state = RegInit(s_idle)
@@ -92,6 +100,9 @@ class GCDMMIOChiselModule(val w: Int) extends Module
 
 // DOC include start: GCD instance regmap
 
+// outer module of the gcd actual hardware
+// makes necessary connections to the inner module and
+// maps how the addresses should behave
 trait GCDModule extends HasRegMap {
   val io: GCDTopIO
 
@@ -129,23 +140,58 @@ trait GCDModule extends HasRegMap {
   io.gcd_busy := impl.io.busy
 
   regmap(
+
+    // here .r means read-only
+    // we can aslo specify the width of the register
     0x00 -> Seq(
       RegField.r(2, status)), // a read-only register capturing current status
+
+    // here .w means write-only
     0x04 -> Seq(
       RegField.w(params.width, x)), // a plain, write-only register
+
+    // here .w means write-only
+    // since y is decoupled io, y.valid is asserted when that register is written
     0x08 -> Seq(
       RegField.w(params.width, y)), // write-only, y.valid is set on write
+
+    // this is a read-only register
+    // important to notice is that when reading is done, the ready signal will automatically will be set
+    // this happens because gcd is connected with decoupled handshake
     0x0C -> Seq(
       RegField.r(params.width, gcd))) // read-only, gcd.ready is set on read
+
+  // Since the ready/valid signals of y are connected to the input_ready and 
+  // input_valid signals of the GCD module, respectively, this register map 
+  // and glue logic has the effect of triggering the GCD algorithm when y is written. 
+  // Therefore, the algorithm is set up by first writing x and then performing 
+  // a triggering write to y. Polling can be used for status checks.
 }
 // DOC include end: GCD instance regmap
 
 // DOC include start: GCD router
+// creating the tile
+// params holds the configs such as base address and width
+// beatBytes : typically 4,8 which is the size of TileLink bus beats
 class GCDTL(params: GCDParams, beatBytes: Int)(implicit p: Parameters)
   extends TLRegisterRouter(
-    params.address, "gcd", Seq("ucbbar,gcd"),
+    
+    // MMIO base address
+    params.address, 
+    
+    // label for the peripheral
+    "gcd",
+    
+    // Device compatibility string, goes into device tree(DTS)
+    // A Device Tree is a data structure used by many operating systems (especially Linux) to describe the hardware layout of a system.
+    // It tells the OS what peripherals exist, where they are mapped, and how to talk to them.
+    Seq("ucbbar,gcd"),
+    
     beatBytes = beatBytes)(
+      // plugin the io bundle
       new TLRegBundle(params, _) with GCDTopIO)(
+
+        // plug in the module
       new TLRegModule(params, _, _) with GCDModule)
 
 class GCDAXI4(params: GCDParams, beatBytes: Int)(implicit p: Parameters)
