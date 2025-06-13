@@ -233,16 +233,14 @@ trait CanHavePeripheryGCD { this: BaseSubsystem =>
 
         // hook it up to pbus
         pbus.coupleTo(portName) {
-          gcd.node :=
-
           // Buffer them for AXI4 protocol
-          AXI4Buffer () :=
-
           // Convert TL to AXI4
-          TLToAXI4 () :=
-          
           // toVariableWidthSlave doesn't use holdFirstDeny, which TLToAXI4() needsx
           // Requests → fragment into correct sizes
+          // we cant seperate below lines
+          gcd.node :=
+          AXI4Buffer () :=
+          TLToAXI4 () :=
           TLFragmenter(pbus.beatBytes, pbus.blockBytes, holdFirstDeny = true) := _
         }
 
