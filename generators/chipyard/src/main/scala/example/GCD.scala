@@ -203,39 +203,89 @@ class GCDAXI4(params: GCDParams, beatBytes: Int)(implicit p: Parameters)
 // DOC include end: GCD router
 
 // DOC include start: GCD lazy trait
+
+// connecting the Tile(based on TileLink or AXI4)
+// to the MIMO crossbar
+// this trait should be enabled in the config
+// This is a cake pattern trait that can only be mixed into something that extends BaseSubsystem.
+// BaseSubsystem represents the base SoC without peripherals
 trait CanHavePeripheryGCD { this: BaseSubsystem =>
+
+  // A string label for the port connection. It will tag this connection in the Diplomacy graph and device tree.
   private val portName = "gcd"
 
-  // Only build if we are using the TL (nonAXI4) version
+  // Look at the config parameters (p(GCDKey))
   val gcd_busy = p(GCDKey) match {
+
+    // If GCDKey is Some(params), it means we want to include a GCD peripheral
     case Some(params) => {
+
+      // select the gcd module based on the parameterized value
+      // defined in params
       val gcd = if (params.useAXI4) {
+
+        // Instantiate GCD AXI4 peripheral as a LazyModule and place it on pbus
         val gcd = pbus { LazyModule(new GCDAXI4(params, pbus.beatBytes)(p)) }
+
+        // hook it up to pbus
         pbus.coupleTo(portName) {
           gcd.node :=
+
+          // Buffer them for AXI4 protocol
           AXI4Buffer () :=
+
+          // Convert TL to AXI4
           TLToAXI4 () :=
+          
           // toVariableWidthSlave doesn't use holdFirstDeny, which TLToAXI4() needsx
+          // Requests → fragment into correct sizes
           TLFragmenter(pbus.beatBytes, pbus.blockBytes, holdFirstDeny = true) := _
         }
+
+        // return gcd as a AXI4 connected tile
         gcd
       } else {
-        val gcd = pbus { LazyModule(new GCDTL(params, pbus.beatBytes)(p)) }
-        pbus.coupleTo(portName) { gcd.node := TLFragmenter(pbus.beatBytes, pbus.blockBytes) := _ }
+
+        // if the params is selected for TileLink
+        val gcd = pbus { 
+          // Instantiate GCDTL peripheral as LazyModule.
+          LazyModule(new GCDTL(params, pbus.beatBytes)(p)) 
+        }
+
+        // Hook it up through a TLFragmenter to handle request splitting
+        pbus.coupleTo(portName) { 
+          gcd.node := TLFragmenter(pbus.beatBytes, pbus.blockBytes) := _ 
+        }
+
+        // return gcd as a TileLink Tile
         gcd
       }
+
+      // Add gcd_busy signal
       val pbus_io = pbus { InModuleBody {
+
+        // Create a busy signal output
         val busy = IO(Output(Bool()))
+
+        // Drive it from gcd.module.io.gcd_busy
         busy := gcd.module.io.gcd_busy
+
+        // return the busy signal
         busy
       }}
+
+      // Create a final gcd_busy output (outside of pbus block)
       val gcd_busy = InModuleBody {
         val busy = IO(Output(Bool())).suggestName("gcd_busy")
         busy := pbus_io
         busy
       }
+
+      // Return this signal if GCD was included
       Some(gcd_busy)
     }
+
+    // If GCD not enabled, no gcd_busy signal
     case None => None
   }
 }
