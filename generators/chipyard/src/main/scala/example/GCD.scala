@@ -175,6 +175,10 @@ trait GCDModule extends HasRegMap {
 // beatBytes : typically 4,8 which is the size of TileLink bus beats
 class GCDTL(params: GCDParams, beatBytes: Int)(implicit p: Parameters)
   extends TLRegisterRouter(
+
+    // GCDTL is itself a LazyModule
+    // Because GCDTL extends TLRegisterRouter, and TLRegisterRouter is a LazyModule,
+    // 👉 GCDTL is also a LazyModule.
     
     // MMIO base address
     params.address, 
@@ -292,6 +296,14 @@ trait CanHavePeripheryGCD { this: BaseSubsystem =>
 // DOC include end: GCD lazy trait
 
 // DOC include start: GCD config fragment
+
+// This defines a Config fragment that:
+// When the Rocket-Chip generator asks for GCDKey, it will return:
+// Some(GCDParams(useAXI4 = ..., useBlackBox = ...))
+// This GCDParams tells the system:
+// Whether to use TileLink or AXI4 (useAXI4)
+// Whether to instantiate a blackbox or Chisel version of the GCD hardware (useBlackBox)
+// ✅ This fragment plugs into Rocket Chip's parameter system.
 class WithGCD(useAXI4: Boolean = false, useBlackBox: Boolean = false) extends Config((site, here, up) => {
   case GCDKey => Some(GCDParams(useAXI4 = useAXI4, useBlackBox = useBlackBox))
 })

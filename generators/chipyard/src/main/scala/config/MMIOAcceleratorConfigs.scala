@@ -16,6 +16,8 @@ class FFTRocketConfig extends Config(
 // DOC include end: FFTRocketConfig
 
 // DOC include start: GCDTLRocketConfig
+
+// this configuration is for adding the GCD module to the SOC
 class GCDTLRocketConfig extends Config(
   new chipyard.example.WithGCD(useAXI4=false, useBlackBox=false) ++          // Use GCD Chisel, connect Tilelink
   new freechips.rocketchip.subsystem.WithNBigCores(1) ++
