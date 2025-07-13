@@ -148,3 +148,6 @@
 [submodule "generators/rocket-chip-inclusive-cache"]
 	path = generators/rocket-chip-inclusive-cache
 	url = https://github.com/chipsalliance/rocket-chip-inclusive-cache.git
+[submodule "generators/chisel_buffers"]
+	path = generators/chisel_buffers
+	url = https://github.com/IsharaNawa/chisel_buffers.git
