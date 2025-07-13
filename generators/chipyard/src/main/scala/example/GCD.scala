@@ -38,11 +38,6 @@ class GCDIO(val w: Int) extends Bundle {
   val busy = Output(Bool())    // Indicates the GCD unit is currently processing a request
 }
 
-// IO port of the TopModule
-trait GCDTopIO extends Bundle {
-  val gcd_busy = Output(Bool())
-}
-
 // IO ports of the inner module who actually has the hardware logic
 trait HasGCDIO extends BaseModule {
   val w: Int
@@ -97,6 +92,11 @@ class GCDMMIOChiselModule(val w: Int) extends Module
   io.busy := state =/= s_idle
 }
 // DOC include end: GCD chisel
+
+// IO port of the TopModule
+trait GCDTopIO extends Bundle {
+  val gcd_busy = Output(Bool())
+}
 
 // DOC include start: GCD instance regmap
 
