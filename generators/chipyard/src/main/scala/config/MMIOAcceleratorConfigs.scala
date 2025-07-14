@@ -29,6 +29,24 @@ class PlusOneTLRocketConfig extends Config(
   new freechips.rocketchip.subsystem.WithNBigCores(1) ++
   new chipyard.config.AbstractConfig)
 
+class PlusOneTLMultiRocketConfig extends Config(
+  new chisel_buffers.mmio_fifo.WithPlusOne(variation=true) ++          // Use Plus One Chisel, connect Tilelink
+  new freechips.rocketchip.subsystem.WithNBigCores(3) ++
+  new chipyard.config.AbstractConfig)
+
+class PlusOneTL8BitRocketConfig extends Config(
+  new chisel_buffers.mmio_fifo.WithPlusOne(variation=true,width=8) ++          // Use Plus One Chisel, connect Tilelink
+  new freechips.rocketchip.subsystem.WithNBigCores(3) ++
+  new chipyard.config.AbstractConfig)
+
+// doesnt work yet! infinite looping in the while section in the c code
+// class PlusOne8BitDiffAddrTLRocketConfig extends Config(
+//   // new chipyard.example.WithGCD(useAXI4=false, useBlackBox=false) ++ 
+//   new chisel_buffers.mmio_fifo.WithPlusOne(variation=true,width=8,address=0x4000) ++
+//   new chisel_buffers.mmio_fifo.WithPlusOne(variation=true,width=8,address=0x4010) ++          // Use Plus One Chisel, connect Tilelink
+//   new freechips.rocketchip.subsystem.WithNBigCores(1) ++
+//   new chipyard.config.AbstractConfig)
+
 // DOC include start: GCDAXI4BlackBoxRocketConfig
 class GCDAXI4BlackBoxRocketConfig extends Config(
   new chipyard.example.WithGCD(useAXI4=true, useBlackBox=true) ++            // Use GCD blackboxed verilog, connect by AXI4->Tilelink
