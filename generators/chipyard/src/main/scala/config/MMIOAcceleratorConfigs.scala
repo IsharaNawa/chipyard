@@ -47,6 +47,11 @@ class PlusOneTL8BitRocketConfig extends Config(
 //   new freechips.rocketchip.subsystem.WithNBigCores(1) ++
 //   new chipyard.config.AbstractConfig)
 
+class BasicISBRocketConfig extends Config(
+  new chisel_buffers.mmio_fifo.WithISB(isRegFile=true) ++          // Use ISB Chisel, connect Tilelink
+  new freechips.rocketchip.subsystem.WithNBigCores(1) ++
+  new chipyard.config.AbstractConfig)
+
 // DOC include start: GCDAXI4BlackBoxRocketConfig
 class GCDAXI4BlackBoxRocketConfig extends Config(
   new chipyard.example.WithGCD(useAXI4=true, useBlackBox=true) ++            // Use GCD blackboxed verilog, connect by AXI4->Tilelink

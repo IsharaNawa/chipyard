@@ -39,6 +39,8 @@ class DigitalTop(implicit p: Parameters) extends ChipyardSystem
   // with chipyard.example.CanHavePeripheryGCD // Enables optionally adding the GCD example widget
 
   with chisel_buffers.mmio_fifo.CanHavePeripheryPlusOne
+
+  with chisel_buffers.mmio_fifo.CanHavePeripheryISB
   
   with chipyard.example.CanHavePeripheryStreamingFIR // Enables optionally adding the DSPTools FIR example widget
   with chipyard.example.CanHavePeripheryStreamingPassthrough // Enables optionally adding the DSPTools streaming-passthrough example widget
