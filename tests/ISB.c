@@ -15,7 +15,7 @@
 
 
 #define ISB_OUTPUT_DATA 0x400C      // get the data from the fifo
-#define ISB_OUTPUT_READY 0x04010    // make output ready to accept data
+#define SET_ISB_OUTPUT_READY 0x04010    // make output ready to accept data
 
 #define STATUS_WRONG_IMPL 0
 #define STATUS_VALID_DATA_FIFO_FULL 1
@@ -79,17 +79,24 @@ void adding_only_1_value(){
     // print the initial status
     print_status();
 
+    // write deque is not ready
+    reg_write32(SET_ISB_OUTPUT_READY,0);
+
     // write the data to the register for adding into fifo
     reg_write32(SET_ISB_INPUT_DATA, enq_data);
     // now make the data valid
-    reg_write32(SET_ISB_INPUT_VALID,1);
+    reg_write32(SET_ISB_INPUT_VALID, 1);
+    asm volatile("fence" ::: "memory");
+
+    // Wait for hardware to consume
+    while (!(reg_read8(ISB_STATUS) & 0x2));  // wait for ready
+    // OR wait for ready to toggle if more accurate
+
+    reg_write32(SET_ISB_INPUT_VALID, 0);
+    asm volatile("fence" ::: "memory");
 
     // now check the status
     print_status();
-
-    // output 
-    // Status = 2 : Buffer is empty and ready to accept data
-    // Status = 3 : Buffer is ready to accept data(has space) and also has valid data at output
 
 }
 
@@ -146,7 +153,7 @@ void adding_only_multiple_values_and_check_status_and_values(){
     print_status();
 
     // print make dequeue not ready
-    reg_write32(ISB_OUTPUT_READY,0);
+    reg_write32(SET_ISB_OUTPUT_READY,0);
 
     // fill the fifo
     for(uint32_t counter=0;counter<ISB_DEPTH+1;counter++){
@@ -174,7 +181,7 @@ void adding_only_multiple_values_and_check_status_and_values(){
 
 int main(void)
 {
-    adding_only_multiple_values_and_check_status_and_values();
+    adding_only_1_value();
 
     return 0;
 }
