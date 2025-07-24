@@ -1,15 +1,15 @@
 #include "mmio.h"
 
-/**********************************************************************
+/*************************************************************************
     Start : Defining the addresses of the SequentialISB module registers
-**********************************************************************/
-#define GET_ISB_STATUS 0x4000   // check the status of the module 
+*************************************************************************/
+#define GET_ISB_STATUS 0x4000   // check the status of the module
 
 #define SET_ISB_INPUT_DATA 0x4004   // set the data to add to fifo
-#define SET_ISB_INPUT_SEQUENTIAL_NUMBER 0x4008 // set the sequential number of the data for enquing
+#define SET_ISB_INPUT_SEQUENTIAL_NUMBER 0x4008  // set the sequential number of the data for enquing
 #define SET_ISB_INPUT_VALID 0x400C  // make that data valid
 
-#define GET_ISB_OUTPUT_DATA 0x4010      // get the data from the fifo
+#define GET_ISB_OUTPUT_DATA 0x4010  // get the data from the fifo
 #define SET_ISB_OUTPUT_READY 0x04014    // make output ready to accept data
 #define SET_ISB_OUTPUT_SEQUENTIAL_NUMBER 0x4018 // set the sequentail number of the data for dequing
 /**********************************************************************
@@ -102,7 +102,7 @@ void print_status(){
 ***********************************************************************/
 
 /***********************************************************************
-    Start : Set sequential value
+    Start : Set sequential value for enquing
 ***********************************************************************/
 void set_enque_sequential_number(){
 
@@ -114,7 +114,7 @@ void set_enque_sequential_number(){
 
 }
 /***********************************************************************
-    End : Set sequential value
+    End : Set sequential value for enquing
 ***********************************************************************/
 
 /***********************************************************************
@@ -166,8 +166,41 @@ uint8_t enque_data(uint32_t data){
 
     }
 }
+/***********************************************************************
+    End : Enqueue data
+***********************************************************************/
 
-int get_deque_data(){
+/***********************************************************************
+    Start : Get data from the enque port
+***********************************************************************/
+uint32_t get_deque_data(){
+    uint32_t data = reg_read32(GET_ISB_OUTPUT_DATA);
+    return data;
+}
+/***********************************************************************
+    End : Get data from the enque port
+***********************************************************************/
+
+/***********************************************************************
+    Start : Set sequential value for dequing
+***********************************************************************/
+void set_deque_sequential_number(){
+
+    // increment the sequential number
+    deque_sequential_number += 1;
+    
+    // set updated sequential number
+    reg_write32(SET_ISB_OUTPUT_SEQUENTIAL_NUMBER,deque_sequential_number);
+
+}
+/***********************************************************************
+    End : Set sequential value for dequing
+***********************************************************************/
+
+/***********************************************************************
+    Start : Get deque data
+***********************************************************************/
+int deque_data(){
 
     uint8_t status = get_status_value();
 
@@ -175,15 +208,13 @@ int get_deque_data(){
     if(status==STATUS_VALID_DATA_FIFO_FULL || status==STATUS_VALID_DATA_FIFO_NOT_FULL){
 
         // get the data
-        uint32_t data = reg_read32(GET_ISB_OUTPUT_DATA);
+        uint32_t data = get_deque_data();
 
         // make the output ready
         reg_write32(SET_ISB_OUTPUT_READY,1);
 
-        // set sequential number
-        // increment the sequential number
-        deque_sequential_number += 1;
-        reg_write32(SET_ISB_OUTPUT_SEQUENTIAL_NUMBER,deque_sequential_number);
+        // update sequential number
+        set_deque_sequential_number();
 
         // print the message
         printf("Dequeued : %d\n", data);
@@ -207,11 +238,103 @@ int get_deque_data(){
 
         return -1;
     }
+}
+/***********************************************************************
+    End : Get deque data
+***********************************************************************/
 
+/***********************************************************************
+    Start : Make the buffer empty
+***********************************************************************/
+void make_fifo_empty_without_saving_deque_data(){
+    
+    // check if the status is not empty
+    while(get_status_value()==STATUS_VALID_DATA_FIFO_FULL || get_status_value()==STATUS_VALID_DATA_FIFO_NOT_FULL){
+
+        // set the output ready signal
+        reg_write32(SET_ISB_OUTPUT_READY,1);
+        
+        // increment the sequential number for dequeing
+        set_deque_sequential_number();
+    }
+
+    // check the status after this and if the status is wrong implemnetation
+    if(get_status_value()==STATUS_WRONG_IMPL){  
+
+        // print the error
+        printf("Error! Wrong Implementation!\n");
+    }
+
+    // check if we have the empty status now
+    if(get_status_value()==STATUS_FIFO_EMPTY){
+
+        // if so, print the status
+        printf("Buffer is successfully emptied\n");
+    }
+    
+}
+/***********************************************************************
+    End : Make the buffer empty
+***********************************************************************/
+
+/***********************************************************************
+    Start : Make the buffer full
+***********************************************************************/
+void make_fifo_full_with_dummy_data(){
+
+    uint32_t counter = 0;
+
+    // check if the status is not full
+    while(get_status_value()==STATUS_FIFO_EMPTY||get_status_value()==STATUS_VALID_DATA_FIFO_NOT_FULL){
+
+        // set data for enqueing
+        set_enque_data(counter);
+
+        // set data for dequeing
+        set_enque_sequential_number();
+
+        // now make the data valid
+        reg_write32(SET_ISB_INPUT_VALID, 1);
+
+        // increment the counter
+        counter += 1;
+    }
+
+    // check the status after this and if the status is wrong implemnetation
+    if(get_status_value()==STATUS_WRONG_IMPL){  
+
+        // print the error
+        printf("Error! Wrong Implementation!\n");
+    }
+
+    // check if we have the full status now
+    if(get_status_value()==STATUS_VALID_DATA_FIFO_FULL){
+
+        // if so, print the status
+        printf("Buffer is successfully filled until full\n");
+    }
 
 }
 /***********************************************************************
-    End : Enqueue data
+    End : Make the buffer full
+***********************************************************************/
+
+
+/***********************************************************************
+    Start : Set initial setup before testing
+***********************************************************************/
+void set_default(){
+
+    // TODO : remove these later
+    reg_write32(SET_ISB_INPUT_VALID, 1);
+    reg_write32(SET_ISB_OUTPUT_READY,1);
+
+    // empty the buffer
+    make_fifo_empty_without_saving_deque_data();
+
+}
+/***********************************************************************
+    End : Set initial setup before testing
 ***********************************************************************/
 
 //--------------------------------------------------------------------------------
@@ -227,6 +350,9 @@ void check_empty_status_test(){
     /*
         Initially there should not be any elements in the array
     */
+
+    // setting the fifo to default
+    set_default();
 
     printf("Running : check_empty_status_test\n");
 
@@ -246,6 +372,9 @@ void check_for_enqueing_function_test(){
     /*
         Check whether the enqueing function work without any errors
     */
+
+    // setting the fifo to default
+    set_default();
 
     printf("Running : check_for_enqueing_function_test\n");
 
@@ -269,6 +398,9 @@ void add_one_value_and_check_status_test(){
         Adding a value and check if the status is changed accordingly
     */
 
+    // setting the fifo to default
+    set_default();
+
     printf("Running : add_one_value_and_check_status_test\n");
 
     // first try to enque data
@@ -291,6 +423,9 @@ void fill_until_full_fifo_and_check_status_test(){
     /*
         Adding values until the fifo is full and check status
     */
+
+    // setting the fifo to default
+    set_default();
 
     printf("Running : fill_until_full_fifo_and_check_status_test\n");
 
@@ -323,14 +458,37 @@ void fill_until_full_fifo_and_check_status_test(){
     printf("\n");
 }
 
-void peek_deque_value_test(){
+void check_deque_value_test(){
+    /*
+        Add a value and deque it and compare whether it is the same
+    */
 
-    printf("Running : peek_deque_value_test\n");
+    // setting the fifo to default
+    set_default();
 
-    int data = get_deque_data();
+    printf("Running : check_deque_value_test\n");
 
+    uint32_t enque_data_ = 10;
 
-    if(data==10){
+    // first add data
+    if(enque_data(enque_data_)){
+        // print the this message when enquing data
+        printf("Data was enqued!\n");
+    }else{
+        // print the error message when enquing data and error occurs
+        printf("Data was not enqued!\n");
+    }
+
+    // get the deque data
+    int deque_data_ = deque_data();
+
+    // print the message if the correct data is not retrieved
+    if(deque_data_==-1){
+        printf("An erro occured while retrieving data\n");
+    }
+
+    // check for test passing
+    if(deque_data_==enque_data_){
         printf("Test Passed!");
     }else{
         printf("Test Failed! Wrong output value.");
@@ -339,53 +497,58 @@ void peek_deque_value_test(){
 
 }
 
-void get_all_data_test(){
+void fill_buffer_and_empty_buffer_test(){
+    /*
+        Fill buffer and deque them and compare whether they are the same
+    */
 
-    printf("Running : get_all_data_test\n");
+    // setting the fifo to default
+    set_default();
+
+    printf("Running : fill_buffer_and_empty_buffer_test\n");
+
+    // first get an array
+    int data[ISB_DEPTH];
+
+    // fill the array
+    for(int i=0;i<ISB_DEPTH;i++){
+        data[i] = i;
+    }
+
+    // first fill the fifo with array values
+    for(int i=0;i<ISB_DEPTH;i++){
+        enque_data(data[i]);
+    }
 
     // track how many items have added
     int counter = 0;
 
-    // get the data values until it runs out
-    for(int i=0;i<ISB_DEPTH;i++){
-        int data = get_deque_data();
-        if(data==i){
+    // now deque and check whether the values are the same
+    for(int i=0;i<ISB_DEPTH+1;i++){
+        int data_ = deque_data();
+
+        // compare the values
+        if(data_==data[i]){
             counter += 1;
-        }else if(data==-1){
-            printf("An error occured\n");
+            printf("%d = %d \n",data_,data[i]);
+        }else if(data_==-1){
+
+            if(get_status_value()==STATUS_FIFO_EMPTY){
+                printf("Dequed until buffer is empty\n");
+                printf("Test Passed!");
+            }else{
+                printf("Test Failed! An error occured\n");
+            }
             break;
         }else{
-            printf("Unexpected Error! Unexpected value received!");
+            printf("Test Failed! Unexpected value received!");
             break;
         }
     }
-
-    // print how many items have retrived by the for loop
-    printf("%d items retrived\n",counter);
-    
-    // now check the statusuint8_t status = get_status_value();
-    uint8_t status = get_status_value();
-
-    if(status==STATUS_FIFO_EMPTY){
-        print_status();
-        printf("Test Passed!");
-    }else{
-        printf("Test Failed! Buffer should be full.");
-    }
     printf("\n");
-
 }
-//--------------------------------------------------------------------------------
-//                               End : TESTING FUNCTIONS
-//--------------------------------------------------------------------------------
 
-int main(void)
-{
-
-    
-
-    // TODO : set default ports(including data emptying)
-
+void run_basic_test_suit(){
 
     check_empty_status_test();
 
@@ -395,11 +558,21 @@ int main(void)
 
     fill_until_full_fifo_and_check_status_test();
 
-    peek_deque_value_test();
+    check_deque_value_test();
 
-    peek_deque_value_test();
+    fill_buffer_and_empty_buffer_test();
 
-    get_all_data_test();
+}
+
+//--------------------------------------------------------------------------------
+//                               End : TESTING FUNCTIONS
+//--------------------------------------------------------------------------------
+
+
+int main(void)
+{
+
+    fill_buffer_and_empty_buffer_test();
 
     return 0;
 }
