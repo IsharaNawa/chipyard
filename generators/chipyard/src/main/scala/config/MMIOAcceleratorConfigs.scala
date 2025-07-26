@@ -53,7 +53,7 @@ class BasicISBRocketConfig extends Config(
   new chipyard.config.AbstractConfig)
 
 class BasicSequentialISBRocketConfig extends Config(
-  new chisel_buffers.sequential_mmio_fifo.WithSequentialISB(isRegFile=true) ++          // Use SequentialISB Chisel, connect Tilelink
+  new chisel_buffers.sequential_mmio_fifo_v1.WithSequentialISB(isRegFile=true) ++          // Use SequentialISB Chisel, connect Tilelink
   new freechips.rocketchip.subsystem.WithNBigCores(1) ++
   new chipyard.config.AbstractConfig)
 
