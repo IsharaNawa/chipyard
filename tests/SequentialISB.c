@@ -7,11 +7,9 @@
 
 #define SET_ISB_INPUT_DATA 0x4004   // set the data to add to fifo
 #define SET_ISB_INPUT_SEQUENTIAL_NUMBER 0x4008  // set the sequential number of the data for enquing
-#define SET_ISB_INPUT_VALID 0x400C  // make that data valid
 
-#define GET_ISB_OUTPUT_DATA 0x4010  // get the data from the fifo
-#define SET_ISB_OUTPUT_READY 0x04014    // make output ready to accept data
-#define SET_ISB_OUTPUT_SEQUENTIAL_NUMBER 0x4018 // set the sequentail number of the data for dequing
+#define GET_ISB_OUTPUT_DATA 0x400C  // get the data from the fifo
+#define SET_ISB_OUTPUT_SEQUENTIAL_NUMBER 0x4010 // set the sequentail number of the data for dequing
 /**********************************************************************
     End : Defining the addresses of the SequentialISB module registers
 **********************************************************************/
@@ -143,9 +141,6 @@ uint8_t enque_data(uint32_t data){
 
         set_enque_sequential_number();
 
-        // now make the data valid
-        reg_write32(SET_ISB_INPUT_VALID, 1);
-
         // print the message
         printf("Enqueued : %d\n", data);
 
@@ -210,9 +205,6 @@ int deque_data(){
         // get the data
         uint32_t data = get_deque_data();
 
-        // make the output ready
-        reg_write32(SET_ISB_OUTPUT_READY,1);
-
         // update sequential number
         set_deque_sequential_number();
 
@@ -250,9 +242,6 @@ void make_fifo_empty_without_saving_deque_data(){
     
     // check if the status is not empty
     while(get_status_value()==STATUS_VALID_DATA_FIFO_FULL || get_status_value()==STATUS_VALID_DATA_FIFO_NOT_FULL){
-
-        // set the output ready signal
-        reg_write32(SET_ISB_OUTPUT_READY,1);
         
         // increment the sequential number for dequeing
         set_deque_sequential_number();
@@ -293,9 +282,6 @@ void make_fifo_full_with_dummy_data(){
         // set data for dequeing
         set_enque_sequential_number();
 
-        // now make the data valid
-        reg_write32(SET_ISB_INPUT_VALID, 1);
-
         // increment the counter
         counter += 1;
     }
@@ -324,10 +310,6 @@ void make_fifo_full_with_dummy_data(){
     Start : Set initial setup before testing
 ***********************************************************************/
 void set_default(){
-
-    // TODO : remove these later
-    reg_write32(SET_ISB_INPUT_VALID, 1);
-    reg_write32(SET_ISB_OUTPUT_READY,1);
 
     // empty the buffer
     make_fifo_empty_without_saving_deque_data();
@@ -572,7 +554,7 @@ void run_basic_test_suit(){
 int main(void)
 {
 
-    fill_buffer_and_empty_buffer_test();
+    run_basic_test_suit();
 
     return 0;
 }
