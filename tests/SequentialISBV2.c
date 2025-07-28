@@ -135,10 +135,13 @@ void set_enque_data(uint32_t data){
 ***********************************************************************/
 uint8_t enque_data(uint32_t data){
 
+    printf("Enquing,,,,");
+
     uint8_t status = get_status_value();
 
     // check whether the buffer can accept data
     if(status==STATUS_FIFO_EMPTY || status==STATUS_VALID_DATA_FIFO_NOT_FULL){
+
         
         set_enque_data(data);
 
@@ -398,7 +401,9 @@ void add_one_value_and_check_status_test(){
     // now check the statusuint8_t status = get_status_value();
     uint8_t status = get_status_value();
 
+
     if(status==STATUS_VALID_DATA_FIFO_NOT_FULL){
+        printf("%d\n",status);
         print_status();
         printf("Test Passed!");
     }else{
@@ -562,6 +567,66 @@ int main(void)
 {
 
     run_basic_test_suit();
+
+    // uint8_t status = reg_read8(GET_ISB_STATUS);
+
+    // printf("Status = ");
+    // if(status==STATUS_WRONG_IMPL){
+    //     printf("%d : Wrong implementation",status);
+    // }else if(status==STATUS_VALID_DATA_FIFO_FULL){
+    //     printf("%d : Deq data is valid, and the buffer is full",status);
+    // }else if(status==STATUS_FIFO_EMPTY){
+    //     printf("%d : Buffer is empty and ready to accept data",status);
+    // }else if(status==STATUS_VALID_DATA_FIFO_NOT_FULL){
+    //     printf("%d : Buffer is ready to accept data(has space) and also has valid data at output",status);
+    // }
+    // printf("\n");
+
+    // reg_write32(SET_ISB_INPUT_DATA, 10);
+
+    // status = reg_read8(GET_ISB_STATUS);
+
+    // printf("Status = ");
+    // if(status==STATUS_WRONG_IMPL){
+    //     printf("%d : Wrong implementation",status);
+    // }else if(status==STATUS_VALID_DATA_FIFO_FULL){
+    //     printf("%d : Deq data is valid, and the buffer is full",status);
+    // }else if(status==STATUS_FIFO_EMPTY){
+    //     printf("%d : Buffer is empty and ready to accept data",status);
+    // }else if(status==STATUS_VALID_DATA_FIFO_NOT_FULL){
+    //     printf("%d : Buffer is ready to accept data(has space) and also has valid data at output",status);
+    // }
+    // printf("\n");
+
+    // reg_write32(SET_ISB_INPUT_SEQUENTIAL_NUMBER, 1);
+
+    // status = reg_read8(GET_ISB_STATUS);
+
+    // printf("Status = ");
+    // if(status==STATUS_WRONG_IMPL){
+    //     printf("%d : Wrong implementation",status);
+    // }else if(status==STATUS_VALID_DATA_FIFO_FULL){
+    //     printf("%d : Deq data is valid, and the buffer is full",status);
+    // }else if(status==STATUS_FIFO_EMPTY){
+    //     printf("%d : Buffer is empty and ready to accept data",status);
+    // }else if(status==STATUS_VALID_DATA_FIFO_NOT_FULL){
+    //     printf("%d : Buffer is ready to accept data(has space) and also has valid data at output",status);
+    // }
+    // printf("\n");
+
+
+    // add_one_value_and_check_status_test();
+
+    
+
+
+
+
+    // Possible Testing scenario detected.
+    // It will give switch the sequential value to other value even when dequing is not done.
+
+
+
 
     return 0;
 }

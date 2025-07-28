@@ -26,6 +26,39 @@
 ***********************************************************************/
 
 /***********************************************************************
+    Start : Sequential Number Toggling
+***********************************************************************/
+#define SEQUENTIAL_NUMBER_0 0
+#define SEQUENTIAL_NUMBER_1 1
+/***********************************************************************
+    End : Sequential Number Toggling
+***********************************************************************/
+
+/***********************************************************************
+    Start : Enque Function Return Codes
+***********************************************************************/
+#define SUCCESSFUL_ENQUE_OPERATION 0
+#define ENQUE_FAILED_DUE_TO_FIFO_FULL 1
+#define ENQUE_FAILED_DUE_TO_WRONG_IMPLEMENTATION 2
+#define ENQUE_FAILED_DUE_TO_COUNTER_NOT_INCREMENTING 3
+#define ENQUE_FAILED_DUE_TO_UNKNOWN_ERROR 4
+/***********************************************************************
+    End : Enque Function Return Codes
+***********************************************************************/
+
+/***********************************************************************
+    Start : Deque Function Return Codes
+***********************************************************************/
+#define DEQUE_FAILED_DUE_TO_FIFO_EMPTY -1
+#define DEQUE_FAILED_DUE_TO_WRONG_IMPLEMENTATION -2
+#define DEQUE_FAILED_DUE_TO_COUNTER_NOT_DECREMENTING -3
+#define DEQUE_FAILED_DUE_TO_UNKNOWN_ERROR -4
+/***********************************************************************
+    End : Deque Function Return Codes
+***********************************************************************/
+
+
+/***********************************************************************
     Start : Current Depth of the ISB
 ***********************************************************************/
 #define ISB_DEPTH 10
@@ -36,8 +69,8 @@
 /***********************************************************************
     Start : Global variables to set sequential number
 ***********************************************************************/
-uint32_t enque_sequential_number = 0;
-uint32_t deque_sequential_number = 0;
+uint32_t enque_sequential_number = SEQUENTIAL_NUMBER_0;
+uint32_t deque_sequential_number = SEQUENTIAL_NUMBER_0;
 /***********************************************************************
     End : Global variables to set sequential number
 ***********************************************************************/
@@ -58,8 +91,8 @@ uint8_t debug_mode = 1;
     Start : Get the value of the status
 ***********************************************************************/
 uint8_t get_status_value(){
-    uint8_t status = reg_read8(GET_ISB_STATUS);
-    return status;
+    uint32_t fifo_status = reg_read32(GET_ISB_STATUS) & 0b11;
+    return fifo_status;
 }
 /***********************************************************************
     End : Get the value of the status
@@ -69,8 +102,8 @@ uint8_t get_status_value(){
     Start : Print the value of the status
 ***********************************************************************/
 void print_status_value(){
-    uint8_t status = reg_read8(GET_ISB_STATUS);
-    printf("Status = %d \n",status);
+    uint32_t fifo_status = reg_read32(GET_ISB_STATUS) & 0b11;
+    printf("Status = %d \n",fifo_status);
 }
 /***********************************************************************
     End : Print the value of the status
@@ -81,7 +114,7 @@ void print_status_value(){
 ***********************************************************************/
 void print_status(){
     
-    uint8_t status = reg_read8(GET_ISB_STATUS);
+    uint8_t status = reg_read32(GET_ISB_STATUS) & 0b11;
 
     printf("Status = ");
     if(status==STATUS_WRONG_IMPL){
@@ -100,12 +133,23 @@ void print_status(){
 ***********************************************************************/
 
 /***********************************************************************
+    Start : Get the count of the fifo
+***********************************************************************/
+uint8_t get_count(){
+    uint32_t count = (reg_read32(GET_ISB_STATUS) & 0xFFFFFFFC) >> 2;
+    return count;
+}
+/***********************************************************************
+    End : Get the count of the fifo
+***********************************************************************/
+
+/***********************************************************************
     Start : Set sequential value for enquing
 ***********************************************************************/
-void set_enque_sequential_number(){
+void toggle_and_set_enque_sequential_number(){
 
-    // increment the sequential number
-    enque_sequential_number += 1;
+    // toggle sequential number
+    enque_sequential_number = (enque_sequential_number == SEQUENTIAL_NUMBER_0) ? SEQUENTIAL_NUMBER_1 : SEQUENTIAL_NUMBER_0;
 
     // write the sequentail number back to the register
     reg_write32(SET_ISB_INPUT_SEQUENTIAL_NUMBER, enque_sequential_number);
@@ -132,33 +176,51 @@ void set_enque_data(uint32_t data){
 ***********************************************************************/
 uint8_t enque_data(uint32_t data){
 
+    // get the status
     uint8_t status = get_status_value();
+
+    // get the count
+    uint32_t count = get_count();
 
     // check whether the buffer can accept data
     if(status==STATUS_FIFO_EMPTY || status==STATUS_VALID_DATA_FIFO_NOT_FULL){
-        
+
+        // set the data
         set_enque_data(data);
 
-        set_enque_sequential_number();
+        // set the sequential number
+        toggle_and_set_enque_sequential_number();
 
-        // print the message
-        printf("Enqueued : %d\n", data);
+        // check if the current count is incremented than previous count
+        if(get_count()==count+1){
+            // print the message
+            printf("Enqueued : %d\n", data);
 
-        return 1;
+            return SUCCESSFUL_ENQUE_OPERATION;
+        }
 
+        else{
+
+            // toggle back the sequential number
+            toggle_and_set_enque_sequential_number();
+
+            // print the message
+            printf("Enqueing error! Count is not incremented after enquing.");
+
+            return ENQUE_FAILED_DUE_TO_COUNTER_NOT_INCREMENTING;
+        }
     }else if(status==STATUS_VALID_DATA_FIFO_FULL){
         printf("Enqueing error! Buffer is full \n");
 
-        return 0;
+        return ENQUE_FAILED_DUE_TO_FIFO_FULL;
     }else if(status==STATUS_WRONG_IMPL){
         printf("Enqueing error! Wrong Implementation \n");
 
-        return 0;
+        return ENQUE_FAILED_DUE_TO_WRONG_IMPLEMENTATION;
     }else{
         printf("Enqueing error! Unknown Error! \n");
 
-        return 0;
-
+        return ENQUE_FAILED_DUE_TO_UNKNOWN_ERROR;
     }
 }
 /***********************************************************************
@@ -179,10 +241,10 @@ uint32_t get_deque_data(){
 /***********************************************************************
     Start : Set sequential value for dequing
 ***********************************************************************/
-void set_deque_sequential_number(){
+void toggle_and_set_deque_sequential_number(){
 
-    // increment the sequential number
-    deque_sequential_number += 1;
+    // toggle sequential number
+    deque_sequential_number = (deque_sequential_number == SEQUENTIAL_NUMBER_0) ? SEQUENTIAL_NUMBER_1 : SEQUENTIAL_NUMBER_0;
     
     // set updated sequential number
     reg_write32(SET_ISB_OUTPUT_SEQUENTIAL_NUMBER,deque_sequential_number);
@@ -197,7 +259,11 @@ void set_deque_sequential_number(){
 ***********************************************************************/
 int deque_data(){
 
+    // get the status
     uint8_t status = get_status_value();
+
+    // get the count
+    uint32_t count = get_count();
 
     // check whether the buffer has valid data
     if(status==STATUS_VALID_DATA_FIFO_FULL || status==STATUS_VALID_DATA_FIFO_NOT_FULL){
@@ -206,29 +272,42 @@ int deque_data(){
         uint32_t data = get_deque_data();
 
         // update sequential number
-        set_deque_sequential_number();
+        toggle_and_set_deque_sequential_number();
 
-        // print the message
-        printf("Dequeued : %d\n", data);
+        // check if the current count is decremented than previous count
+        if(get_count()==count-1){
+            // print the message
+            printf("Dequeued : %d\n", data);
 
-        return data;
+            return data;
+        }
 
+        else{
+
+            // toggle back the sequential number
+            toggle_and_set_deque_sequential_number();
+
+            // print the error message
+            printf("Enqueing error! Count is not decremented after dequeing.");
+
+            return DEQUE_FAILED_DUE_TO_COUNTER_NOT_DECREMENTING;
+        }
 
     }else if(status==STATUS_FIFO_EMPTY){
 
         printf("Dequeing error! Buffer is Empty \n");
 
-        return -1;
+        return DEQUE_FAILED_DUE_TO_FIFO_EMPTY;
 
     }else if(status==STATUS_WRONG_IMPL){
-        printf("Enqueing error! Wrong Implementation \n");
+        printf("Dequeing error! Wrong Implementation \n");
 
-        return -1;
+        return DEQUE_FAILED_DUE_TO_WRONG_IMPLEMENTATION;
     }
     else{
-        printf("Enqueing error! Unknown Error! \n");
+        printf("Dequeing error! Unknown Error! \n");
 
-        return -1;
+        return DEQUE_FAILED_DUE_TO_UNKNOWN_ERROR;
     }
 }
 /***********************************************************************
@@ -244,14 +323,14 @@ void make_fifo_empty_without_saving_deque_data(){
     while(get_status_value()==STATUS_VALID_DATA_FIFO_FULL || get_status_value()==STATUS_VALID_DATA_FIFO_NOT_FULL){
         
         // increment the sequential number for dequeing
-        set_deque_sequential_number();
+        toggle_and_set_deque_sequential_number();
     }
 
     // check the status after this and if the status is wrong implemnetation
     if(get_status_value()==STATUS_WRONG_IMPL){  
 
         // print the error
-        printf("Error! Wrong Implementation!\n");
+        printf("Error while emptying! Wrong Implementation!\n");
     }
 
     // check if we have the empty status now
@@ -280,7 +359,7 @@ void make_fifo_full_with_dummy_data(){
         set_enque_data(counter);
 
         // set data for dequeing
-        set_enque_sequential_number();
+        toggle_and_set_enque_sequential_number();
 
         // increment the counter
         counter += 1;
@@ -333,7 +412,7 @@ void check_empty_status_test(){
         Initially there should not be any elements in the array
     */
 
-    // setting the fifo to default
+    // setting the fifo to default(empty fifo)
     set_default();
 
     printf("Running : check_empty_status_test\n");
@@ -350,40 +429,54 @@ void check_empty_status_test(){
     
 }
 
-void check_for_enqueing_function_test(){
+void check_for_enqueing_function_for_successful_operation_test(){
     /*
         Check whether the enqueing function work without any errors
     */
 
-    // setting the fifo to default
+    // setting the fifo to default(emptying)
     set_default();
 
-    printf("Running : check_for_enqueing_function_test\n");
+    // print the message
+    printf("Running : check_for_enqueing_function_for_successful_operation_test\n");
 
-    uint8_t status = get_status_value();
+    // get the count
+    uint32_t count = get_count();
 
-    if(status==STATUS_FIFO_EMPTY || status==STATUS_VALID_DATA_FIFO_NOT_FULL){
-        if(enque_data(10)){
+    // get the enque function result
+    uint8_t enque_operation_status = enque_data(10);
+
+    // if enque is successful
+    if(enque_operation_status==SUCCESSFUL_ENQUE_OPERATION){
+        // check if the counter is incremented
+        if(get_count()==count+1){
             print_status();
             printf("Test Passed!");
         }else{
-            printf("Test Failed! There is an error!");
+            // print the test failed error message
+            printf("Test Failed! Counter is not incremented after enqueing");
         }
     }else{
-        printf("Test Aborted! Fifo does not have space!");
+        printf("Test Failed! There is an error! Error Code : %d",enque_operation_status);
     }
     printf("\n");    
 }
 
 void add_one_value_and_check_status_test(){
     /*
-        Adding a value and check if the status is changed accordingly
+        Adding only one value after emptying and check if the status is changed accordingly
     */
 
     // setting the fifo to default
     set_default();
 
+    // print the message
     printf("Running : add_one_value_and_check_status_test\n");
+
+    // get the status
+    printf("Initial Status\n");
+
+    print_status();
 
     // first try to enque data
     enque_data(10);
@@ -392,13 +485,13 @@ void add_one_value_and_check_status_test(){
     uint8_t status = get_status_value();
 
     if(status==STATUS_VALID_DATA_FIFO_NOT_FULL){
+        printf("%d\n",status);
         print_status();
         printf("Test Passed!");
     }else{
         printf("Test Failed! Buffer should have valid data and not full.");
     }
     printf("\n");
-
 }
 
 void fill_until_full_fifo_and_check_status_test(){
@@ -417,7 +510,7 @@ void fill_until_full_fifo_and_check_status_test(){
     // fill the data values until it runs out
     for(int i=0;i<ISB_DEPTH;i++){
         uint8_t result = enque_data(i);
-        if(result==1){
+        if(result==SUCCESSFUL_ENQUE_OPERATION){
             counter += 1;
         }else{
             break;
@@ -428,10 +521,13 @@ void fill_until_full_fifo_and_check_status_test(){
     printf("%d items newly added\n",counter);
     
 
-    // now check the statusuint8_t status = get_status_value();
+    // now check the status
     uint8_t status = get_status_value();
 
-    if(status==STATUS_VALID_DATA_FIFO_FULL){
+    // get the counter
+    uint32_t count = get_count();
+
+    if(status==STATUS_VALID_DATA_FIFO_FULL && count==ISB_DEPTH){
         print_status();
         printf("Test Passed!");
     }else{
@@ -453,30 +549,33 @@ void check_deque_value_test(){
     uint32_t enque_data_ = 10;
 
     // first add data
-    if(enque_data(enque_data_)){
+    if(enque_data(enque_data_)==SUCCESSFUL_ENQUE_OPERATION){
         // print the this message when enquing data
         printf("Data was enqued!\n");
+
+        // get the deque data
+        int deque_data_ = deque_data();
+
+        // print the message if the correct data is not retrieved
+        if(deque_data_== DEQUE_FAILED_DUE_TO_WRONG_IMPLEMENTATION || deque_data_ == DEQUE_FAILED_DUE_TO_FIFO_EMPTY ||
+            deque_data_==DEQUE_FAILED_DUE_TO_UNKNOWN_ERROR || deque_data_ == DEQUE_FAILED_DUE_TO_COUNTER_NOT_DECREMENTING
+        ){
+
+            printf("An error occured while retrieving data with Error code : %d\n",deque_data_);
+        }
+
+        // check for test passing
+        if(deque_data_==enque_data_ && get_count()==0){
+            printf("Test Passed!");
+        }else{
+            printf("Test Failed! Wrong output value and/or Wrong counter value.");
+        }
+        printf("\n");
+
     }else{
         // print the error message when enquing data and error occurs
-        printf("Data was not enqued!\n");
+        printf("Test Aborted! Data was not enqued!\n");
     }
-
-    // get the deque data
-    int deque_data_ = deque_data();
-
-    // print the message if the correct data is not retrieved
-    if(deque_data_==-1){
-        printf("An erro occured while retrieving data\n");
-    }
-
-    // check for test passing
-    if(deque_data_==enque_data_){
-        printf("Test Passed!");
-    }else{
-        printf("Test Failed! Wrong output value.");
-    }
-    printf("\n");
-
 }
 
 void fill_buffer_and_empty_buffer_test(){
@@ -534,7 +633,7 @@ void run_basic_test_suit(){
 
     check_empty_status_test();
 
-    check_for_enqueing_function_test();
+    check_for_enqueing_function_for_successful_operation_test();
 
     add_one_value_and_check_status_test();
 
@@ -543,7 +642,6 @@ void run_basic_test_suit(){
     check_deque_value_test();
 
     fill_buffer_and_empty_buffer_test();
-
 }
 
 //--------------------------------------------------------------------------------
