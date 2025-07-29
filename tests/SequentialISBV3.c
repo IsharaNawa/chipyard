@@ -629,6 +629,80 @@ void fill_buffer_and_empty_buffer_test(){
     printf("\n");
 }
 
+void check_for_duplicate_value_enque_and_deque(){
+
+    // empty the buffer
+    set_default();
+
+    // check the buffer is empty
+    if(get_count()!=0){
+        printf("Test Failed! Buffer is not empty\n");
+    }
+
+    // enque data value
+    int enque_data_value = 10;
+
+    // now enque this data
+    enque_data(enque_data_value);
+
+    // now check the status and count
+    if(get_status_value()==STATUS_VALID_DATA_FIFO_NOT_FULL && get_count()==1){
+        printf("First enque operation is successful\n");
+    }else{
+        printf("Test Failed! Status or Count is not correct\n");
+    }
+
+    // now add this value again
+    enque_data(enque_data_value);
+
+    // now check the status and count
+    if(get_status_value()==STATUS_VALID_DATA_FIFO_NOT_FULL && get_count()==2){
+        printf("Second enque operation is successful\n");
+    }else{
+        printf("Test Failed! Status or Count is not correct\n");
+    }
+
+    // now check the values using deque
+    // get the deque data
+    int deque_data_ = deque_data();
+
+    // print the message if the correct data is not retrieved
+    if(deque_data_== DEQUE_FAILED_DUE_TO_WRONG_IMPLEMENTATION || deque_data_ == DEQUE_FAILED_DUE_TO_FIFO_EMPTY ||
+        deque_data_==DEQUE_FAILED_DUE_TO_UNKNOWN_ERROR || deque_data_ == DEQUE_FAILED_DUE_TO_COUNTER_NOT_DECREMENTING
+    ){
+
+        printf("An error occured while retrieving data with Error code : %d\n",deque_data_);
+    }
+
+    // check the deque data, counter , and status
+    if(get_status_value()==STATUS_VALID_DATA_FIFO_NOT_FULL && get_count()==1 && deque_data_==enque_data_value){
+        printf("First deque operation is successful\n");
+    }else{
+        printf("Test Failed! Status or Count or Deque value is not correct\n");
+    }
+
+    // again deque
+    // get the deque data
+    deque_data_ = deque_data();
+
+    // print the message if the correct data is not retrieved
+    if(deque_data_== DEQUE_FAILED_DUE_TO_WRONG_IMPLEMENTATION || deque_data_ == DEQUE_FAILED_DUE_TO_FIFO_EMPTY ||
+        deque_data_==DEQUE_FAILED_DUE_TO_UNKNOWN_ERROR || deque_data_ == DEQUE_FAILED_DUE_TO_COUNTER_NOT_DECREMENTING
+    ){
+
+        printf("An error occured while retrieving data with Error code : %d\n",deque_data_);
+    }
+
+    // check the deque data, counter , and status
+    if(get_status_value()==STATUS_FIFO_EMPTY && get_count()==0 && deque_data_==enque_data_value){
+        printf("Second deque operation is successful\n");
+        printf("Test Passed\n");
+    }else{
+        printf("Test Failed! Status or Count or Deque value is not correct\n");
+    }
+    
+}
+
 void run_basic_test_suit(){
 
     check_empty_status_test();
@@ -642,6 +716,8 @@ void run_basic_test_suit(){
     check_deque_value_test();
 
     fill_buffer_and_empty_buffer_test();
+
+    check_for_duplicate_value_enque_and_deque();
 }
 
 //--------------------------------------------------------------------------------
