@@ -151,3 +151,6 @@
 [submodule "generators/diplomacy"]
 	path = generators/diplomacy
 	url = https://github.com/chipsalliance/diplomacy.git
+[submodule "generators/compress-acc"]
+	path = generators/compress-acc
+	url = https://github.com/ucb-bar/compress-acc.git
