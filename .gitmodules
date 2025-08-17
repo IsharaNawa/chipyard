@@ -133,9 +133,6 @@
 [submodule "generators/rerocc"]
 	path = generators/rerocc
 	url = https://github.com/ucb-bar/rerocc.git
-[submodule "generators/compress-acc"]
-	path = generators/compress-acc
-	url = https://github.com/ucb-bar/compress-acc.git
 [submodule "generators/saturn"]
 	path = generators/saturn
 	url = https://github.com/ucb-bar/saturn-vectors.git
