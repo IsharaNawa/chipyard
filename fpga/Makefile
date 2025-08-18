@@ -35,7 +35,7 @@ ifeq ($(SUB_PROJECT),vcu118)
 	MODEL             ?= VCU118FPGATestHarness
 	VLOG_MODEL        ?= VCU118FPGATestHarness
 	MODEL_PACKAGE     ?= chipyard.fpga.vcu118
-	CONFIG            ?= RocketVCU118Config
+	CONFIG            ?= MyRocketVCU118Config
 	CONFIG_PACKAGE    ?= chipyard.fpga.vcu118
 	GENERATOR_PACKAGE ?= chipyard
 	TB                ?= none # unused

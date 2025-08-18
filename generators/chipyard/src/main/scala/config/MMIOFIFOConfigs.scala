@@ -46,3 +46,8 @@ class BasicSequentialISBV3RocketConfig extends Config(
   new freechips.rocketchip.subsystem.WithNBigCores(1) ++
   new chipyard.config.AbstractConfig)
 
+class BasicSequentialISBV4RocketConfig extends Config(
+  new chisel_buffers.sequential_mmio_fifo_v4.WithSequentialISB(isRegFile=true,address=0x4000) ++          // Use SequentialISB Chisel, connect Tilelink
+  new freechips.rocketchip.subsystem.WithNBigCores(1) ++
+  new chipyard.config.AbstractConfig)
+

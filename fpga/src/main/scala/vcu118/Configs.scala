@@ -67,6 +67,13 @@ class RocketVCU118Config extends Config(
   new WithVCU118Tweaks ++
   new chipyard.RocketConfig
 )
+
+class MyRocketVCU118Config extends Config(
+  new WithVCU118Tweaks ++
+  new chipyard.BasicSequentialISBV4RocketConfig
+)
+
+
 // DOC include end: AbstractVCU118 and Rocket
 
 class BoomVCU118Config extends Config(
