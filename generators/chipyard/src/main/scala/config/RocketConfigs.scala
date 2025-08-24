@@ -12,6 +12,11 @@ class RocketConfig extends Config(
   new freechips.rocketchip.subsystem.WithNBigCores(1) ++         // single rocket-core
   new chipyard.config.AbstractConfig)
 
+class RocketWithISBConfig extends Config(
+  new chisel_buffers.sequential_mmio_fifo_v4.WithSequentialISB(isRegFile=true,address=0x4000) ++  // add the ISB here
+  new freechips.rocketchip.subsystem.WithNBigCores(1) ++         // single rocket-core
+  new chipyard.config.AbstractConfig)
+
 class TinyRocketConfig extends Config(
   new chipyard.harness.WithDontTouchChipTopPorts(false) ++        // TODO FIX: Don't dontTouch the ports
   new testchipip.soc.WithNoScratchpads ++                         // All memory is the Rocket TCMs
