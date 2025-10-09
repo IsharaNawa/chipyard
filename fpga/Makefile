@@ -14,7 +14,7 @@ sim_name := none
 #########################################################################################
 # include shared variables
 #########################################################################################
-SUB_PROJECT ?= vcu118
+SUB_PROJECT ?= genesys2
 
 ifeq ($(SUB_PROJECT),vc707)
 	SBT_PROJECT       ?= chipyard_fpga
@@ -84,6 +84,21 @@ ifeq ($(SUB_PROJECT),arty100t)
 	TB                ?= none # unused
 	TOP               ?= ChipTop
 	BOARD             ?= arty_a7_100
+	FPGA_BRAND        ?= xilinx
+endif
+
+ifeq ($(SUB_PROJECT),genesys2)
+	# TODO: Fix with Arty
+	SBT_PROJECT       ?= chipyard_fpga
+	MODEL             ?= GENESYS2FPGATestHarness
+	VLOG_MODEL        ?= GENESYS2FPGATestHarness
+	MODEL_PACKAGE     ?= chipyard.fpga.genesys2
+	CONFIG            ?= RocketGENESYS2Config
+	CONFIG_PACKAGE    ?= chipyard.fpga.genesys2
+	GENERATOR_PACKAGE ?= chipyard
+	TB                ?= none # unused
+	TOP               ?= ChipTop
+	BOARD             ?= genesys2
 	FPGA_BRAND        ?= xilinx
 endif
 

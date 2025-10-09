@@ -21,6 +21,16 @@ class GCDTLRocketConfig extends Config(
   new chipyard.config.AbstractConfig)
 // DOC include end: GCDTLRocketConfig
 
+class BasicSequentialRocketConfig extends Config(
+  new chipyard.example.WithSequentialISB(isRegFile=true,address=0x4000) ++          // Use SequentialISB Chisel, connect Tilelink
+  new freechips.rocketchip.rocket.WithNBigCores(1) ++
+  new chipyard.config.AbstractConfig)
+
+class DualCoreSequentialRocketConfig extends Config(
+  new chipyard.example.WithSequentialISB(isRegFile=true,address=0x4000) ++          // Use SequentialISB Chisel, connect Tilelink
+  new freechips.rocketchip.rocket.WithNBigCores(2) ++
+  new chipyard.config.AbstractConfig)
+
 // DOC include start: GCDAXI4BlackBoxRocketConfig
 class GCDAXI4BlackBoxRocketConfig extends Config(
   new chipyard.example.WithGCD(useAXI4=true, useBlackBox=true) ++            // Use GCD blackboxed verilog, connect by AXI4->Tilelink
