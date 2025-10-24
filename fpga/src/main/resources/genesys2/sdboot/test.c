@@ -655,18 +655,26 @@ void check_for_duplicate_value_enque_and_deque_test(){
 void run_basic_test_suit(){
 
     check_empty_status_test();
+    kprintln("");
 
     check_for_enqueing_function_for_successful_operation_test();
+    kprintln("");
 
     add_one_value_and_check_status_test();
+    kprintln("");
 
     fill_until_full_fifo_and_check_status_test();
+    kprintln("");
 
     check_deque_value_test();
+    kprintln("");
 
     fill_buffer_and_empty_buffer_test();
+    kprintln("");
 
     check_for_duplicate_value_enque_and_deque_test();
+    kprintln("");
+
 }
 
 //--------------------------------------------------------------------------------
@@ -677,28 +685,11 @@ void run_basic_test_suit(){
 int main() {
     uart_init();
     kprintln("Hello this is bootrom!");
-    kprintln("This is a simple test application which replaces SD boot");
 
     // Print hartid
     kprintln("Hart ID: %ld", read_csr(mhartid));
 
-    kprintln("Reading FIFO status register at GET_ISB_STATUS");
-
-    int fifo_status = reg_read32(GET_ISB_STATUS) & 0b11;
-    kprintln("FIFO Status = %d", fifo_status);
-
-    kprintln("Printing the status:");
-    print_status();
-
-    // Loop forever so we can see the output
-    // int index = 0;
-    // while(1) {
-    //   kprintf("Value = %d\n", index++);
-    //   if(index % 10000 == 0) {
-    //     index = 10000;
-    //   }
-    // }
-
+    // run the tests
     kprintln("Running v4 tests...");
 
     run_basic_test_suit();

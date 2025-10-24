@@ -21,7 +21,9 @@ elf := $(BUILD_DIR)/sdboot.elf
 $(elf): head.S kprintf.c sd.c output.dtb #這樣 make 才知道當 output.dtb 改變時要重編 sdboot.elf。
 	mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -DTL_CLK="$(PBUS_CLK)" $(LFLAGS) -o $@ head_nodtb.S sd_speedup.c kprintf.c $(ROOT_DIR)/driver/uart.c
-	$(CC) $(CFLAGS) -DTL_CLK="$(PBUS_CLK)" $(LFLAGS) -o $@ head_nodtb.S test.c kprintf.c $(ROOT_DIR)/driver/uart.c
+# 	$(CC) $(CFLAGS) -DTL_CLK="$(PBUS_CLK)" $(LFLAGS) -o $@ head_nodtb.S hello.c kprintf.c $(ROOT_DIR)/driver/uart.c
+	$(CC) $(CFLAGS) -DTL_CLK="$(PBUS_CLK)" $(LFLAGS) -o $@ head_nodtb.S decoder.c kprintf.c embedded_cat.c jpg.c $(ROOT_DIR)/driver/uart.c
+# 	$(CC) $(CFLAGS) -DTL_CLK="$(PBUS_CLK)" $(LFLAGS) -o $@ head_nodtb.S hello.c kprintf.c $(ROOT_DIR)/driver/uart.c
 # $(CC) $(CFLAGS) -DTL_CLK="$(PBUS_CLK)" $(LFLAGS) -o $@ head.S sd.c kprintf.c $(ROOT_DIR)/driver/uart.c #$(ROOT_DIR)/driver/spi.c
 
 .PHONY: elf
