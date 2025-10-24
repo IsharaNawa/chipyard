@@ -337,9 +337,7 @@ Header* readJPG(Header* header, const unsigned char *data, size_t size) {
 	if (!header) return (Header*)0;
 	byte last = 0, current = 0;
 
-
 	header_init(header);
-	kprintln("Header initialized");
 
 	/* Initialize per-header reader */
 	header->reader_data = data;
