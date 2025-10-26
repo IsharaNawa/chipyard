@@ -8,25 +8,22 @@
  * and the Header/ByteArray types from jpg.h.
  */
 
+// When running on bear metal : comment below and add includes for platform, uart and kprintln implementations
+#include <stdio.h>
 #include "jpg.h"
 #include "embedded_cat.h"
-#include "uart.h"
-#include "kprintf.h"
-#include "platform.h"
+// #include "uart.h"
+// #include "kprintf.h"
+// #include "platform.h"
+#define kprintf(...) printf(__VA_ARGS__)
+#define kputc(c) putchar(c)
+#define kprintln(fmt, ...) do { printf(fmt, ##__VA_ARGS__); putchar('\n'); } while (0)
+/* If code calls uart_init() on the board, make it a no-op for host builds. */
+#define uart_init() ((void)0)
 
-/* Small helpers: print a single hex nibble and a two-digit hex byte using kputc */
-static inline char _hex_digit(unsigned v) {
-	return (v < 10) ? ('0' + v) : ('a' + (v - 10));
-}
-
-static void print_hex2(unsigned v) {
-	unsigned byte = v & 0xFFu;
-	kputc(_hex_digit((byte >> 4) & 0xF));
-	kputc(_hex_digit(byte & 0xF));
-}
-
-/* Initialize per-header in-memory reader using the embedded image bytes. */
-/* removed memreader_init: readJPG will initialize per-header reader state after header_init */
+/////////////////////////////////////////
+// Start : JPEG File Reading Stage
+/////////////////////////////////////////
 
 /* Helper: read a single byte from the memory stream, set header->valid=false on EOF */
 static int read_byte_or_fail(Header *header) {
@@ -331,6 +328,8 @@ void readComment(Header* header) {
 	}
 }
 
+/* Initialize per-header in-memory reader using the embedded image bytes. */
+/* removed memreader_init: readJPG will initialize per-header reader state after header_init */
 Header* readJPG(Header* header, const unsigned char *data, size_t size) {
 
 	/* Caller provides storage for Header to allow re-entrant usage and avoid function-static state. */
@@ -505,6 +504,286 @@ Header* readJPG(Header* header, const unsigned char *data, size_t size) {
 
 	return header;
 }
+/////////////////////////////////////////
+// End : JPEG File Reading Stage
+/////////////////////////////////////////
+
+
+
+/////////////////////////////////////////
+// Start : Huffman Decoding Stage (genesys2/bare-metal friendly)
+/////////////////////////////////////////
+
+/* Forward prototypes for new functions */
+
+/* Generate canonical codes for a Huffman table into the provided codes[] array. */
+static void generateCodesLocal(const HuffmanTable* hTable, uint* codes) {
+	unsigned int code = 0;
+	for (uint i = 0; i < 16; ++i) {
+		for (uint j = hTable->offsets[i]; j < hTable->offsets[i + 1]; ++j) {
+			codes[j] = code;
+			code += 1;
+		}
+		code <<= 1;
+	}
+}
+
+typedef struct {
+	ByteArray* data;
+	size_t nextByte;
+	unsigned nextBit;
+} BitReader;
+
+static void br_init(BitReader* br, ByteArray* data) {
+	br->data = data;
+	br->nextByte = 0;
+	br->nextBit = 0;
+}
+
+static int br_readBit(BitReader* br) {
+	if (br->nextByte >= br->data->size) return -1;
+	int bit = (br->data->data[br->nextByte] >> (7 - br->nextBit)) & 1;
+	br->nextBit += 1;
+	if (br->nextBit == 8) {
+		br->nextBit = 0;
+		br->nextByte += 1;
+	}
+	return bit;
+}
+
+static int br_readBits(BitReader* br, const uint length) {
+	int bits = 0;
+	for (uint i = 0; i < length; ++i) {
+		int bit = br_readBit(br);
+		if (bit == -1) { bits = -1; break; }
+		bits = (bits << 1) | bit;
+	}
+	return bits;
+}
+
+static void br_align(BitReader* br) {
+	if (br->nextByte >= br->data->size) return;
+	if (br->nextBit != 0) {
+		br->nextBit = 0;
+		br->nextByte += 1;
+	}
+}
+
+/* Return symbol (0..255) or -1 on error */
+/* Get next Huffman symbol using a precomputed codes[] table. */
+static int getNextSymbol(BitReader* b, const HuffmanTable* hTable, const uint* codes) {
+	unsigned int currentCode = 0;
+	for (uint i = 0; i < 16; ++i) {
+		int bit = br_readBit(b);
+		if (bit == -1) return -1;
+		currentCode = (currentCode << 1) | (unsigned)bit;
+
+		for (uint j = hTable->offsets[i]; j < hTable->offsets[i + 1]; ++j) {
+			if (codes[j] == currentCode) {
+				return (int)hTable->symbols[j];
+			}
+		}
+	}
+	return -1;
+}
+
+static bool decodeMCUComponent(BitReader* b, int* component, int* previousDC,
+						const HuffmanTable* dcTable, const uint* dcCodes,
+						const HuffmanTable* acTable, const uint* acCodes) {
+	int lenSym = getNextSymbol(b, dcTable, dcCodes);
+	if (lenSym == -1) {
+		kprintln("Error - Invalid DC value");
+		return false;
+	}
+	if (lenSym > 11) {
+		kprintln("Error - DC coefficient length greater than 11");
+		return false;
+	}
+	int coeff = 0;
+	if (lenSym != 0) {
+		coeff = br_readBits(b, (uint)lenSym);
+		if (coeff == -1) { kprintln("Error - Invalid DC value"); return false; }
+		if (coeff < (1 << (lenSym - 1))) coeff -= (1 << lenSym) - 1;
+	}
+	component[0] = coeff + *previousDC;
+	*previousDC = component[0];
+
+	uint i = 1;
+	while (i < 64) {
+	int sym = getNextSymbol(b, acTable, acCodes);
+		if (sym == -1) { kprintln("Error - Invalid AC value"); return false; }
+		if (sym == 0x00) {
+			for (; i < 64; ++i) component[zigZagMap[i]] = 0;
+			return true;
+		}
+		unsigned numZeroes = (unsigned)(sym >> 4);
+		unsigned coeffLength = (unsigned)(sym & 0x0F);
+		if (sym == 0xF0) numZeroes = 16;
+		if (i + numZeroes >= 64) { kprintln("Error - Zero run-length exceeded MCU"); return false; }
+		for (unsigned j = 0; j < numZeroes; ++j, ++i) component[zigZagMap[i]] = 0;
+		if (coeffLength > 10) { kprintln("Error - AC coefficient length greater than 10"); return false; }
+		if (coeffLength != 0) {
+			int v = br_readBits(b, coeffLength);
+			if (v == -1) { kprintln("Error - Invalid AC value"); return false; }
+			if (v < (1 << (coeffLength - 1))) v -= (1 << coeffLength) - 1;
+			component[zigZagMap[i]] = v;
+			i += 1;
+		}
+	}
+	return true;
+}
+
+/* Helper to get pointer to component array inside MCU by index */
+static int* mcu_channel_ptr(MCU* mcus, uint mcuIndex, uint comp) {
+	MCU* m = &mcus[mcuIndex];
+	switch (comp) {
+		case 0: return m->y;
+		case 1: return m->cb;
+		case 2: return m->cr;
+		default: return 0;
+	}
+}
+
+/* The shared MCU buffer `genesys2_mcus` is defined in genesys2_code/jpg.c
+ * and declared in genesys2_code/jpg.h so the decoder can use it without
+ * allocating memory at runtime. */
+
+MCU* decodeHuffmanData(Header* const header) {
+	const uint mcuHeight = (header->height + 7) / 8;
+	const uint mcuWidth = (header->width + 7) / 8;
+	size_t total = (size_t)mcuHeight * (size_t)mcuWidth;
+	if (total == 0) return 0;
+	if (total > GENESYS2_MAX_MCUS) {
+		kprintln("Error - MCU count %zu exceeds static capacity %d", total, GENESYS2_MAX_MCUS);
+		return 0;
+	}
+
+	/* Precompute canonical codes for each Huffman table into local arrays. */
+	uint dcCodes[4][162];
+	uint acCodes[4][162];
+	for (uint i = 0; i < 4; ++i) {
+		/* Initialize to a sentinel (0xFFFFFFFF) for safety.
+		 * Use volatile pointer stores in a simple loop so the compiler
+		 * will not substitute a call to memset/memcpy in optimized builds. */
+		{
+			volatile uint *p = (volatile uint *)dcCodes[i];
+			for (uint k = 0; k < 162; ++k) p[k] = 0xFFFFFFFFu;
+		}
+		{
+			volatile uint *p = (volatile uint *)acCodes[i];
+			for (uint k = 0; k < 162; ++k) p[k] = 0xFFFFFFFFu;
+		}
+		if (header->huffmanDCTables[i].set) generateCodesLocal(&header->huffmanDCTables[i], dcCodes[i]);
+		if (header->huffmanACTables[i].set) generateCodesLocal(&header->huffmanACTables[i], acCodes[i]);
+	}
+
+	BitReader br;
+	br_init(&br, &header->huffmanData);
+
+	int previousDC[3] = {0,0,0};
+
+	for (size_t idx = 0; idx < total; ++idx) {
+		if (header->restartInterval != 0 && idx % header->restartInterval == 0) {
+			previousDC[0] = previousDC[1] = previousDC[2] = 0;
+			br_align(&br);
+		}
+		for (uint c = 0; c < header->numComponents; ++c) {
+			int* compPtr = mcu_channel_ptr(genesys2_mcus, (uint)idx, c);
+			if (compPtr == 0) { return 0; }
+			uint dcid = header->colorComponents[c].huffmanDCTableID;
+			uint acid = header->colorComponents[c].huffmanACTableID;
+			if (!decodeMCUComponent(&br, compPtr, &previousDC[c],
+				&header->huffmanDCTables[dcid], dcCodes[dcid],
+				&header->huffmanACTables[acid], acCodes[acid])) {
+				return 0;
+			}
+		}
+	}
+
+	return genesys2_mcus;
+}
+
+/////////////////////////////////////////
+// End : Huffman Decoding Stage
+/////////////////////////////////////////
+
+/////////////////////////////////////////
+// Start : Debugging / BMP Output Stage
+/////////////////////////////////////////
+
+/* Small helpers: print a single hex nibble and a two-digit hex byte using kputc */
+static inline char _hex_digit(unsigned v) {
+	return (v < 10) ? ('0' + v) : ('a' + (v - 10));
+}
+
+static void print_hex2(unsigned v) {
+	unsigned byte = v & 0xFFu;
+	kputc(_hex_digit((byte >> 4) & 0xF));
+	kputc(_hex_digit(byte & 0xF));
+}
+
+/* Print the BMP bytes as two-digit hex to the console (stdout) using kprintf/kputc.
+ * Diagnostics continue to be printed with kprintln (goes to stderr or host stdout depending on mapping).
+ */
+static void printBMP(const Header* header, const MCU* mcus) {
+	if (!header || !mcus) return;
+	const uint mcuHeight = (header->height + 7) / 8;
+	const uint mcuWidth = (header->width + 7) / 8;
+	const uint paddingSize = (4 - (header->width * 3) % 4) % 4;
+	const uint fileSize = 14 + 12 + header->height * header->width * 3 + header->height * paddingSize;
+
+	size_t byte_count = 0;
+
+	#define PRINT_BYTE_HEX_K(b) do { \
+		unsigned _bb = (unsigned)(b) & 0xFFu; \
+		/* print two-digit lowercase hex without relying on width support in kprintf */ \
+		print_hex2(_bb); \
+		kprintf(" "); \
+		byte_count++; \
+	if ((byte_count % 16) == 0) { kprintln(""); } \
+	} while(0)
+
+	/* BITMAPFILEHEADER */
+	PRINT_BYTE_HEX_K('B'); PRINT_BYTE_HEX_K('M');
+	PRINT_BYTE_HEX_K((fileSize >> 0) & 0xFF); PRINT_BYTE_HEX_K((fileSize >> 8) & 0xFF);
+	PRINT_BYTE_HEX_K((fileSize >> 16) & 0xFF); PRINT_BYTE_HEX_K((fileSize >> 24) & 0xFF);
+	PRINT_BYTE_HEX_K(0); PRINT_BYTE_HEX_K(0); PRINT_BYTE_HEX_K(0); PRINT_BYTE_HEX_K(0);
+	PRINT_BYTE_HEX_K(0x1A); PRINT_BYTE_HEX_K(0); PRINT_BYTE_HEX_K(0); PRINT_BYTE_HEX_K(0);
+
+	/* BITMAPCOREHEADER (12 bytes) */
+	PRINT_BYTE_HEX_K(12); PRINT_BYTE_HEX_K(0); PRINT_BYTE_HEX_K(0); PRINT_BYTE_HEX_K(0);
+	/* width (2 bytes little endian) */
+	PRINT_BYTE_HEX_K((header->width >> 0) & 0xFF); PRINT_BYTE_HEX_K((header->width >> 8) & 0xFF);
+	/* height (2 bytes little endian) */
+	PRINT_BYTE_HEX_K((header->height >> 0) & 0xFF); PRINT_BYTE_HEX_K((header->height >> 8) & 0xFF);
+	/* planes */
+	PRINT_BYTE_HEX_K(1); PRINT_BYTE_HEX_K(0);
+	/* bitcount 24 */
+	PRINT_BYTE_HEX_K(24); PRINT_BYTE_HEX_K(0);
+
+	/* Pixel data bottom-up: B G R */
+	for (int i = (int)header->height - 1; i >= 0; --i) {
+		const uint mcuRow = i / 8;
+		const uint pixelRow = i % 8;
+		for (uint j = 0; j < header->width; ++j) {
+			const uint mcuColumn = j / 8;
+			const uint pixelColumn = j % 8;
+			const uint mcuIndex = mcuRow * mcuWidth + mcuColumn;
+			const uint pixelIndex = pixelRow * 8 + pixelColumn;
+			const MCU *m = &mcus[mcuIndex];
+			unsigned char r = (unsigned char)m->y[pixelIndex];
+			unsigned char g = (unsigned char)m->cb[pixelIndex];
+			unsigned char b = (unsigned char)m->cr[pixelIndex];
+			PRINT_BYTE_HEX_K(b);
+			PRINT_BYTE_HEX_K(g);
+			PRINT_BYTE_HEX_K(r);
+		}
+		for (uint p = 0; p < paddingSize; ++p) PRINT_BYTE_HEX_K(0);
+	}
+
+	if ((byte_count % 16) != 0) kprintln("");
+	#undef PRINT_BYTE_HEX_K
+}
 
 /* print all info extracted from the JPG file */
 void printHeader(Header* header) {
@@ -530,7 +809,7 @@ void printHeader(Header* header) {
 	/* print frame type as two-digit hex (0xc0 style) */
 	kprintf("Frame Type: 0x");
 	print_hex2((unsigned)header->frameType);
-	kprintln("");
+			kprintln("");
 	kprintln("Height: %d", (int)header->height);
 	kprintln("Width: %d", (int)header->width);
 	kprintln("DHT=============");
@@ -586,6 +865,11 @@ void printHeader(Header* header) {
 	kprintln("Length of Huffman Data: %d", (int)header->huffmanData.size);
 }
 
+/////////////////////////////////////////
+// End : Debugging / BMP Output Stage
+/////////////////////////////////////////
+
+
 int main(void) {
 
 	uart_init();
@@ -613,6 +897,17 @@ int main(void) {
 	}
 
 	printHeader(header);
+
+	/* Huffman decode using a static MCU buffer suitable for bare-metal targets. */
+	MCU* mcus = decodeHuffmanData(header);
+	if (mcus == 0) {
+		kprintln("Error - Huffman decode failed");
+		header_free(header);
+		return 1;
+	}
+
+	/* Print BMP bytes (hex) to console. No file I/O is performed to remain bare-metal friendly. */
+	printBMP(header, mcus);
 
 	header_free(header);
 	return 0;

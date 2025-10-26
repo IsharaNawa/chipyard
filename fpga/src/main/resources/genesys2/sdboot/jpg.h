@@ -191,6 +191,27 @@ static const byte zigZagMap[64] = {
     53, 60, 61, 54, 47, 55, 62, 63
 };
 
+/* MCU structure shared across variants. Moved here so multiple decoder
+ * translation units can reference the same type and a shared static
+ * MCU buffer can be provided in a single compilation unit (jpg.c). */
+typedef struct {
+    int y[64];
+    int g[64];
+    int b[64];
+    int cb[64];
+    int cr[64];
+} MCU;
+
+/* Default static MCU capacity for bare-metal builds. Can be overridden
+ * by defining GENESYS2_MAX_MCUS before including this header. */
+#ifndef GENESYS2_MAX_MCUS
+#define GENESYS2_MAX_MCUS 16384
+#endif
+
+/* Shared static MCU buffer (defined in jpg.c). Decoder code may use this
+ * buffer to avoid dynamic allocation on bare-metal targets. */
+extern MCU genesys2_mcus[GENESYS2_MAX_MCUS];
+
 #ifdef __cplusplus
 }
 #endif

@@ -1,3 +1,14 @@
+/* genesys2_code/jpg.c
+ * Definition of the shared static MCU buffer used by the genesys2 decoder.
+ * Placing the array here avoids multiple definitions across translation units
+ * and keeps dynamic allocation out of the bare-metal build.
+ */
+
+#include "jpg.h"
+
+/* Define the shared MCU buffer with the capacity controlled by the
+ * GENESYS2_MAX_MCUS macro (default provided in jpg.h). */
+MCU genesys2_mcus[GENESYS2_MAX_MCUS];
 /* jpg.c - implementations for the C-compatible jpg helper types
  */
 
