@@ -3,22 +3,22 @@
 # SW Build 6140274 on Wed May 21 22:58:25 MDT 2025
 # IP Build 6138677 on Thu May 22 03:10:11 MDT 2025
 # SharedData Build 6139179 on Tue May 20 17:58:58 MDT 2025
-# Start of session at: Thu Oct  9 17:02:40 2025
-# Process ID         : 361717
+# Start of session at: Sun Oct 26 21:22:34 2025
+# Process ID         : 155815
 # Current directory  : /home/ishara/Research/repos/chipyard_new/chipyard/fpga/scripts
-# Command line       : vivado -mode batch -source /tmp/tmp.GSJuVPgC4Z
+# Command line       : vivado -mode batch -source /tmp/tmp.zTfcDftQwK
 # Log file           : /home/ishara/Research/repos/chipyard_new/chipyard/fpga/scripts/vivado.log
 # Journal file       : /home/ishara/Research/repos/chipyard_new/chipyard/fpga/scripts/vivado.jou
 # Running On         : ishara-desktop
 # Platform           : Ubuntu
 # Operating System   : Ubuntu 24.04.3 LTS
 # Processor Detail   : AMD Ryzen 9 9950X3D 16-Core Processor
-# CPU Frequency      : 2982.000 MHz
+# CPU Frequency      : 624.000 MHz
 # CPU Physical cores : 16
 # CPU Logical cores  : 32
-# Host memory        : 64901 MB
+# Host memory        : 64928 MB
 # Swap memory        : 8589 MB
-# Total Virtual      : 73491 MB
-# Available Virtual  : 65771 MB
+# Total Virtual      : 73518 MB
+# Available Virtual  : 63500 MB
 #-----------------------------------------------------------
-source /tmp/tmp.GSJuVPgC4Z
+source /tmp/tmp.zTfcDftQwK
