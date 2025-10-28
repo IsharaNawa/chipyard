@@ -12,14 +12,14 @@
 #include <stdio.h>
 #include "jpg.h"
 #include "embedded_cat.h"
-// #include "uart.h"
-// #include "kprintf.h"
-// #include "platform.h"
-#define kprintf(...) printf(__VA_ARGS__)
-#define kputc(c) putchar(c)
-#define kprintln(fmt, ...) do { printf(fmt, ##__VA_ARGS__); putchar('\n'); } while (0)
-/* If code calls uart_init() on the board, make it a no-op for host builds. */
-#define uart_init() ((void)0)
+#include "uart.h"
+#include "kprintf.h"
+#include "platform.h"
+// #define kprintf(...) printf(__VA_ARGS__)
+// #define kputc(c) putchar(c)
+// #define kprintln(fmt, ...) do { printf(fmt, ##__VA_ARGS__); putchar('\n'); } while (0)
+// /* If code calls uart_init() on the board, make it a no-op for host builds. */
+// #define uart_init() ((void)0)
 
 /////////////////////////////////////////
 // Start : JPEG File Reading Stage
