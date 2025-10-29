@@ -146,14 +146,14 @@ void readQuantizationTable(Header* header) {
 			for (uint i = 0; i < 64; ++i) {
 				int a = read_byte_or_fail(header); if (!header->valid) return;
 				int b = read_byte_or_fail(header); if (!header->valid) return;
-				header->quantizationTables[tableID].table[i] = ((uint)a << 8) + (uint)b;
+				header->quantizationTables[tableID].table[zigZagMap[i]] = ((uint)a << 8) + (uint)b;
 			}
 			length -= 128;
 		}
 		else {
 			for (uint i = 0; i < 64; ++i) {
 				int v = read_byte_or_fail(header); if (!header->valid) return;
-				header->quantizationTables[tableID].table[i] = (uint)v;
+				header->quantizationTables[tableID].table[zigZagMap[i]] = (uint)v;
 			}
 			length -= 64;
 		}
@@ -649,8 +649,8 @@ static int* mcu_channel_ptr(MCU* mcus, uint mcuIndex, uint comp) {
  * allocating memory at runtime. */
 
 MCU* decodeHuffmanData(Header* const header) {
-	const uint mcuHeight = (header->height + 7) / 8;
 	const uint mcuWidth = (header->width + 7) / 8;
+	const uint mcuHeight = (header->height + 7) / 8;
 	size_t total = (size_t)mcuHeight * (size_t)mcuWidth;
 	if (total == 0) return 0;
 	if (total > GENESYS2_MAX_MCUS) {
@@ -700,12 +700,48 @@ MCU* decodeHuffmanData(Header* const header) {
 		}
 	}
 
-	return genesys2_mcus;
+		return genesys2_mcus;
 }
 
 /////////////////////////////////////////
 // End : Huffman Decoding Stage
 /////////////////////////////////////////
+
+/////////////////////////////////////////
+// Start : Dequantization Stage (genesys2/bare-metal friendly)
+/////////////////////////////////////////
+
+/* multiply each coefficient in a component by the corresponding
+	* quantization table value (both are stored in natural order)
+	*/
+static void dequantizeMCUComponent(const QuantizationTable* qTable, int* component) {
+	for (uint i = 0; i < 64; ++i) {
+		component[i] *= (int)qTable->table[i];
+	}
+}
+
+/* dequantize all MCUs using the caller-provided/static buffer
+	* Use 0 instead of NULL for bare-metal friendliness.
+	*/
+static void dequantize(const Header* header, MCU* mcus) {
+	const uint mcuHeight = (header->height + 7) / 8;
+	const uint mcuWidth = (header->width + 7) / 8;
+
+	size_t total = (size_t)mcuHeight * (size_t)mcuWidth;
+	for (size_t i = 0; i < total; ++i) {
+		for (uint j = 0; j < header->numComponents; ++j) {
+			int* comp = mcu_channel_ptr(mcus, (uint)i, j);
+			if (comp != 0) {
+				dequantizeMCUComponent(&header->quantizationTables[header->colorComponents[j].quantizationTableID], comp);
+			}
+		}
+	}
+}
+
+/////////////////////////////////////////
+// End : Dequantization Stage
+/////////////////////////////////////////
+
 
 /////////////////////////////////////////
 // Start : Debugging / BMP Output Stage
@@ -906,17 +942,16 @@ int main(void) {
 		return 1;
 	}
 
+	/* dequantization MCU coefficients (match cpp_version behavior) */
+	dequantize(header, mcus);
+
 	/* Print BMP bytes (hex) to console. No file I/O is performed to remain bare-metal friendly. */
 	printBMP(header, mcus);
 
-	// print success message
-	kprintln("JPG to BMP conversion completed successfully.");
-
-	// free the header
 	header_free(header);
 
-	// loop forever
-	while (1);
-	
+	kprintln("Program completed successfully.");
+	while (1) { /* halt */ }
+
 	return 0;
 }
