@@ -31,7 +31,7 @@ payload="$BUILD_DIR/my_payload.bin"
 echo "Built payload: $payload ($(stat -c '%s' "$payload") bytes)"
 
 # prompt for device
-read -rp "Enter SD raw device (example /dev/sdb, NOT /dev/sdb1): " DEV
+read -rp "Enter SD raw device (example /dev/sdb, NOT /dev/sdb1): use lsblk for this : " DEV
 DEV="$(realpath -s "$DEV")"
 # strip partition number for mmcblk/pX style
 DEV_ROOT="${DEV%p*}"

@@ -44,26 +44,57 @@ echo "1) picocom (recommended)"
 echo "2) screen"
 echo "3) minicom"
 read -p "Enter choice (1-3): " choice
+read -p "Enable logging to file? (y/N): " logchoice
+LOG_ENABLED=0
+LOGFILE=""
+if [[ "$logchoice" =~ ^[Yy]$ ]]; then
+    LOG_ENABLED=1
+    TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+    LOGFILE="$(pwd)/serial-${TIMESTAMP}.log"
+    echo "Logging enabled -> $LOGFILE"
+fi
 
 case $choice in
     1)
         echo "Starting picocom... (Ctrl+A, Ctrl+X to exit)"
-        picocom -b $BAUDRATE $DEVICE
+        if [ $LOG_ENABLED -eq 1 ]; then
+            echo "Starting picocom wrapped with script to log to $LOGFILE"
+            script -q -c "picocom -b $BAUDRATE $DEVICE" "$LOGFILE"
+        else
+            picocom -b $BAUDRATE $DEVICE
+        fi
         ;;
     2)
         echo "Starting screen... (Ctrl+A, K to exit)"
-        screen $DEVICE $BAUDRATE
+        if [ $LOG_ENABLED -eq 1 ]; then
+            # screen's logfile naming varies; wrap screen with 'script' to capture its session to our logfile
+            echo "Starting screen with session logging to $LOGFILE (wrapped with script)"
+            # -q: quiet, -c: command to run, then logfile path
+            script -q -c "screen $DEVICE $BAUDRATE" "$LOGFILE"
+        else
+            screen $DEVICE $BAUDRATE
+        fi
         ;;
     3)
         echo "Starting minicom..."
         if command -v minicom &> /dev/null; then
-            minicom -D $DEVICE -b $BAUDRATE
+            if [ $LOG_ENABLED -eq 1 ]; then
+                echo "Starting minicom with capture to $LOGFILE"
+                minicom -D $DEVICE -b $BAUDRATE -C "$LOGFILE"
+            else
+                minicom -D $DEVICE -b $BAUDRATE
+            fi
         else
             echo "minicom not installed. Install with: sudo apt install minicom"
         fi
         ;;
     *)
         echo "Invalid choice. Using picocom..."
-        picocom -b $BAUDRATE $DEVICE
+        if [ $LOG_ENABLED -eq 1 ]; then
+            echo "Starting picocom wrapped with script to log to $LOGFILE"
+            script -q -c "picocom -b $BAUDRATE $DEVICE" "$LOGFILE"
+        else
+            picocom -b $BAUDRATE $DEVICE
+        fi
         ;;
 esac

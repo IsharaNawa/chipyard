@@ -9,20 +9,25 @@
 
 int main() {
     uart_init();
-    kprintln("Hello this is bootrom!");
-    kprintln("This is a simple test application which replaces SD boot");
+  kprintln("My Hello From Ishara its me for csr test");
 
-    // Print hartid
-    kprintf("Hart ID: %ld\n", read_csr(mhartid));
-    
-    // Loop forever so we can see the output
-    int index = 0;
-    while(1) {
-      kprintf("Value = %d\n", index++);
-      if(index % 10000 == 0) {
-        index = 10000;
-      }
-    }
-    
+  /* Read the hardware cycle counter CSR (mcycle) and print it */
+  unsigned long cycles = read_csr(mcycle);
+  /* kprintf supports %ld/%lx (with 'l' modifier) and %x; it does NOT support %u/%lu.
+    Also kprintln doesn't forward variadic args correctly, so use kprintf + explicit newline. */
+  kprintf("mcycle new = %lx", cycles);
+  kputc('\r'); kputc('\n');
+
+  int a = 10 + 20 * 2;
+  kprintln("Computed value: %d", a);
+
+  kprintln("My Hello From Ishara its me");
+
+  /* print again for verification in hex */
+  kprintf("mcycle = %lx", read_csr(mcycle));
+  kputc('\r'); kputc('\n');
+
+  /* keep running so the message remains visible */
+  while (1);
     return 0;
 }

@@ -909,6 +909,14 @@ int main(void) {
 	/* Print BMP bytes (hex) to console. No file I/O is performed to remain bare-metal friendly. */
 	printBMP(header, mcus);
 
+	// print success message
+	kprintln("JPG to BMP conversion completed successfully.");
+
+	// free the header
 	header_free(header);
+
+	// loop forever
+	while (1);
+	
 	return 0;
 }
