@@ -5,29 +5,29 @@ set -euo pipefail
 SDBOOT_DIR="$(realpath "$(dirname "$0")/../src/main/resources/genesys2/sdboot")"
 cd "$SDBOOT_DIR"
 
-BUILD_DIR=build
-mkdir -p "$BUILD_DIR"
+BUILD_DIR=ishara
+# mkdir -p "$BUILD_DIR"
 
 # tools
-CC="${RISCV:-/home/ishara/Research/repos/chipyard_new/chipyard/.conda-env/riscv-tools}/bin/riscv64-unknown-elf-gcc"
-OBJCOPY="${RISCV:-/home/ishara/Research/repos/chipyard_new/chipyard/.conda-env/riscv-tools}/bin/riscv64-unknown-elf-objcopy"
-command -v "$CC" >/dev/null 2>&1 || { echo "riscv gcc not found at $CC"; exit 1; }
-command -v "$OBJCOPY" >/dev/null 2>&1 || { echo "riscv objcopy not found at $OBJCOPY"; exit 1; }
+# CC="${RISCV:-/home/ishara/Research/repos/chipyard_new/chipyard/.conda-env/riscv-tools}/bin/riscv64-unknown-elf-gcc"
+# OBJCOPY="${RISCV:-/home/ishara/Research/repos/chipyard_new/chipyard/.conda-env/riscv-tools}/bin/riscv64-unknown-elf-objcopy"
+# command -v "$CC" >/dev/null 2>&1 || { echo "riscv gcc not found at $CC"; exit 1; }
+# command -v "$OBJCOPY" >/dev/null 2>&1 || { echo "riscv objcopy not found at $OBJCOPY"; exit 1; }
 
 # sources (edit as needed)
 # Default payload: decoder.c with its helpers embedded_cat.c and jpg.c plus kprintf and uart
-SRCS=(decoder.c embedded_cat.c jpg.c kprintf.c driver/uart.c)
+# SRCS=(decoder.c embedded_cat.c jpg.c kprintf.c driver/uart.c)
 # SRCS=(hello.c kprintf.c driver/uart.c) # uncomment to use simple hello world
-echo "Sources: ${SRCS[*]}"
+# echo "Sources: ${SRCS[*]}"
 
 # compile
-echo "Compiling..."
-"$CC" -march=rv64ima_zicsr_zifencei -mabi=lp64 -mcmodel=medany -O2 \
-  -I. -I./include -I./driver \
-  "${SRCS[@]}" -static -nostdlib -Wl,-Ttext=0x80000000 -o "$BUILD_DIR/my_payload.elf"
+# echo "Compiling..."
+# "$CC" -march=rv64ima_zicsr_zifencei -mabi=lp64 -mcmodel=medany -O2 \
+#   -I. -I./include -I./driver \
+#   "${SRCS[@]}" -static -nostdlib -Wl,-Ttext=0x80000000 -o "$BUILD_DIR/my_payload.elf"
 
-"$OBJCOPY" -O binary "$BUILD_DIR/my_payload.elf" "$BUILD_DIR/my_payload.bin"
-payload="$BUILD_DIR/my_payload.bin"
+# "$OBJCOPY" -O binary "$BUILD_DIR/my_payload.elf" "$BUILD_DIR/my_payload.bin"
+payload="$BUILD_DIR/decoder.bin"
 echo "Built payload: $payload ($(stat -c '%s' "$payload") bytes)"
 
 # prompt for device
