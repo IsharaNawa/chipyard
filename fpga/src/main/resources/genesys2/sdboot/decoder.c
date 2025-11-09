@@ -11,7 +11,7 @@
 #include "jpg.h"
 #include "embedded_cropped_cat.h"
 
-// Use below on bear metal : comment below and add includes for platform, uart and kprintln implementations
+// Use below on bear metal : uncomment below and add includes for platform, uart and kprintln implementations
 #include "uart.h"
 #include "kprintf.h"
 #include "platform.h"
@@ -32,8 +32,6 @@ static inline void enable_fpu(void) {
 // #define kprintln(fmt, ...) do { printf(fmt, ##__VA_ARGS__); putchar('\n'); } while (0)
 // #define uart_init() ((void)0)
 // #define enable_fpu() ((void)0)
-
-
 
 
 /////////////////////////////////////////
@@ -523,13 +521,9 @@ Header* readJPG(Header* header, const unsigned char *data, size_t size) {
 // End : JPEG File Reading Stage
 /////////////////////////////////////////
 
-
-
 /////////////////////////////////////////
-// Start : Huffman Decoding Stage (genesys2/bare-metal friendly)
+// Start : Huffman Decoding Stage
 /////////////////////////////////////////
-
-/* Forward prototypes for new functions */
 
 /* Generate canonical codes for a Huffman table into the provided codes[] array. */
 static void generateCodesLocal(const HuffmanTable* hTable, uint* codes) {
@@ -723,7 +717,7 @@ MCU* decodeHuffmanData(Header* const header) {
 /////////////////////////////////////////
 
 /////////////////////////////////////////
-// Start : Dequantization Stage (genesys2/bare-metal friendly)
+// Start : Dequantization Stage
 /////////////////////////////////////////
 
 /* multiply each coefficient in a component by the corresponding
@@ -758,7 +752,7 @@ static void dequantize(const Header* header, MCU* mcus) {
 /////////////////////////////////////////
 
 /////////////////////////////////////////
-// Start : Inverse DCT Stage (genesys2)
+// Start : Inverse DCT Stage
 /////////////////////////////////////////
 
 /* Optimized inverse DCT component (port of c_version implementation).
@@ -768,21 +762,21 @@ static void dequantize(const Header* header, MCU* mcus) {
 static void inverseDCTComponent(int* component) {
 	// Correct JPEG IDCT constants - testing with -G0 to disable sdata optimization
 
-	const float m0 = 1.84776f;  // 2*cos(1*pi/16) - NOT USED but declared
-	const float m1 = 1.41421f;  // 2*cos(1*pi/16)
-	const float m3 = 1.41421f; // -2*cos(3*pi/16)
-	const float m5 = 0.765367f;  // sqrt(2)
-	const float m2 = 1.08239f;  // 2*cos(3*pi/16)
-	const float m4 = 2.61313f; // -2*cos(1*pi/16) - sqrt(2)
+	const float m0 = 1.847759008f;  // 2*cos(1*pi/16) - NOT USED but declared
+	const float m1 = 1.414213538f;  // 2*cos(1*pi/16)
+	const float m2 = 1.082392216f;  // 2*cos(3*pi/16)
+	const float m3 = 1.414213538f; // -2*cos(3*pi/16)
+	const float m4 = 2.613125801f; // -2*cos(1*pi/16) - sqrt(2)
+	const float m5 = 0.765366852f;  // sqrt(2)
 
-	const float s0 = 0.353553f;  // 1/(2*sqrt(2))
-	const float s1 = 0.490393f;  // cos(3*pi/8) / sqrt(2)
-	const float s2 = 0.461940f;  // cos(2*pi/8) / sqrt(2)
-	const float s3 = 0.415735f;  // cos(1*pi/8) / sqrt(2)
-	const float s4 = 0.353553f;  // 1/(2*sqrt(2))
-	const float s5 = 0.277785f;  // cos(3*pi/8) / sqrt(2)
-	const float s6 = 0.191342f;  // cos(2*pi/8) / sqrt(2)
-	const float s7 = 0.0975452f;  // cos(1*pi/8) / sqrt(2)
+	const float s0 = 0.353553385f;  // 1/(2*sqrt(2))
+	const float s1 = 0.490392625f;  // cos(3*pi/8) / sqrt(2)
+	const float s2 = 0.461939752f;  // cos(2*pi/8) / sqrt(2)
+	const float s3 = 0.415734798f;  // cos(1*pi/8) / sqrt(2)
+	const float s4 = 0.353553385f;  // 1/(2*sqrt(2))
+	const float s5 = 0.277785122f;  // cos(3*pi/8) / sqrt(2)
+	const float s6 = 0.191341713f;  // cos(2*pi/8) / sqrt(2)
+	const float s7 = 0.097545177f;  // cos(1*pi/8) / sqrt(2)
 
 	float intermediate[64];
 
@@ -942,6 +936,45 @@ static void inverseDCT(const Header* header, MCU* mcus) {
 
 /////////////////////////////////////////
 // End : Inverse DCT Stage
+/////////////////////////////////////////
+
+
+/////////////////////////////////////////
+// Start : YCbCr to RGB Conversion Stage
+/////////////////////////////////////////
+
+/* Convert one MCU from YCbCr to RGB. Store R->y, G->cb, B->cr to match
+ * the existing BMP writer which reads those fields. Implemented to be
+ * bare-metal friendly: no dynamic allocation, no printf, simple math.
+ */
+static void YCbCrToRGBMCU(MCU* m) {
+	for (uint i = 0; i < 64; ++i) {
+		int r = (int)(m->y[i] + 1.402f * m->cr[i] + 128.0f);
+		int g = (int)(m->y[i] - 0.344f * m->cb[i] - 0.714f * m->cr[i] + 128.0f);
+		int b = (int)(m->y[i] + 1.772f * m->cb[i] + 128.0f);
+
+		if (r < 0) r = 0; else if (r > 255) r = 255;
+		if (g < 0) g = 0; else if (g > 255) g = 255;
+		if (b < 0) b = 0; else if (b > 255) b = 255;
+
+		/* store bytes into fields expected by BMP writer */
+		m->y[i] = r;
+		m->cb[i] = g;
+		m->cr[i] = b;
+	}
+}
+
+static void YCbCrToRGB(const Header* header, MCU* mcus) {
+	const uint mcuHeight = (header->height + 7) / 8;
+	const uint mcuWidth = (header->width + 7) / 8;
+	size_t total = (size_t)mcuHeight * (size_t)mcuWidth;
+	for (size_t i = 0; i < total; ++i) {
+		YCbCrToRGBMCU(&mcus[i]);
+	}
+}
+
+/////////////////////////////////////////
+// End : YCbCr to RGB Conversion Stage
 /////////////////////////////////////////
 
 
@@ -1110,6 +1143,7 @@ void printHeader(Header* header) {
 
 int main(void) {
 
+	/* Initialize UART for console output */
 	uart_init();
 
 	/* Enable FPU by setting FS bits in mstatus to 0b11 (Dirty) */
@@ -1126,14 +1160,13 @@ int main(void) {
 	else{
 		kprintln("Embedded image data size: %d bytes", (int)embedded_cropped_cat_size);
 	}
+
 	/* Provide caller-allocated header storage to allow re-entrant usage and avoid function-static storage. */
 	static Header header_storage;
-	// long read_cycles1 = read_csr(mcycle);
+
+
+	/* Stage 1 : Read JPG file from embedded data into Header structure. */
 	Header *header = readJPG(&header_storage, embedded_cropped_cat, embedded_cropped_cat_size);
-	// long read_cycles2 = read_csr(mcycle);
-
-	// kprintln("JPG read cycles: %ld", read_cycles2 - read_cycles1);
-
 	if (!header) {
 		kprintln("Error - Memory error");
 		return 1;
@@ -1143,32 +1176,26 @@ int main(void) {
 		header_free(header);
 		return 1;
 	}
-
 	printHeader(header);
 
-	/* Huffman decode using a static MCU buffer suitable for bare-metal targets. */
-	// read_cycles1 = read_csr(mcycle);
+	/* Stage 2 : Huffman decode using a static MCU buffer suitable for bare-metal targets. */
 	MCU* mcus = decodeHuffmanData(header);
-	// read_cycles2 = read_csr(mcycle);
-	// kprintln("Huffman decode cycles: %ld", read_cycles2 - read_cycles1);
 	if (mcus == 0) {
 		kprintln("Error - Huffman decode failed");
 		header_free(header);
 		return 1;
 	}
 
-	/* dequantization MCU coefficients (match cpp_version behavior) */
-	// read_cycles2 = read_csr(mcycle);
+	/* Stage 3 : Dequantization MCU coefficients (match cpp_version behavior) */
 	dequantize(header, mcus);
-	// read_cycles2 = read_csr(mcycle);
-	// kprintln("Dequantization cycles: %ld", read_cycles2 - read_cycles1);
-	/* inverse DCT on all MCUs (match cpp_version / c_version behavior) */
-	// read_cycles2 = read_csr(mcycle);
-	inverseDCT(header, mcus);
-	// read_cycles2 = read_csr(mcycle);
-	// kprintln("Vertical Inverse DCT cycles: %ld", read_cycles2 - read_cycles1);
 
-	/* Print BMP bytes (hex) to console. No file I/O is performed to remain bare-metal friendly. */
+	/* Stage 4 : Inverse DCT on all MCUs (match cpp_version / c_version behavior) */
+	inverseDCT(header, mcus);
+
+	/* Stage 5 : YCbCr -> RGB conversion (produce 0..255 channels for BMP writer) */
+	YCbCrToRGB(header, mcus);
+
+	/* Stage 6 : Print BMP bytes (hex) to console. No file I/O is performed to remain bare-metal friendly. */
 	printBMP(header, mcus);
 
 	header_free(header);
