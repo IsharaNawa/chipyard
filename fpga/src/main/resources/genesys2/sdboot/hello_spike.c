@@ -49,7 +49,8 @@ int main() {
 
   /* Enable FPU by setting FS bits in mstatus */
   asm volatile ("li t0, 0x6000"); // FS = 0b11 (dirty)
-  asm volatile ("csrs mstatus, t0");
+  asm volatile ("csrs mstatus, t0"); // add these two lines to enable FPU
+
   
   print_str("FPU enabled in mstatus\r\n");
 
