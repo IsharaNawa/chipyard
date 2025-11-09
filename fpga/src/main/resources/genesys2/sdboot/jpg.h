@@ -180,6 +180,14 @@ typedef struct {
 void header_init(Header *h);
 void header_free(Header *h);
 
+/* IDCT helpers: compute and expose constants used by the optimized inverse DCT.
+ * For bare-metal builds we compute these once at init and expose pointers.
+ * The implementation may use math functions (cosf/sqrtf) if available.
+ */
+void idct_init(void);
+const float* idct_get_m(void); /* returns pointer to array[6]: {m0,m1,m3,m5,m2,m4} */
+const float* idct_get_s(void); /* returns pointer to array[8]: s0..s7 */
+
 static const byte zigZagMap[64] = {
     0,   1,  8, 16,  9,  2,  3, 10,
     17, 24, 32, 25, 18, 11,  4,  5,

@@ -8,18 +8,28 @@
  * and the Header/ByteArray types from jpg.h.
  */
 
-// When running on bear metal : comment below and add includes for platform, uart and kprintln implementations
-#include <stdio.h>
 #include "jpg.h"
 #include "embedded_cat.h"
-#include "uart.h"
-#include "kprintf.h"
-#include "platform.h"
-// #define kprintf(...) printf(__VA_ARGS__)
-// #define kputc(c) putchar(c)
-// #define kprintln(fmt, ...) do { printf(fmt, ##__VA_ARGS__); putchar('\n'); } while (0)
-// /* If code calls uart_init() on the board, make it a no-op for host builds. */
-// #define uart_init() ((void)0)
+
+// Use below on bear metal : comment below and add includes for platform, uart and kprintln implementations
+// #include "uart.h"
+// #include "kprintf.h"
+// #include "platform.h"
+
+// #define read_csr(reg) ({ unsigned long __tmp; \
+//   asm volatile ("csrr %0, " #reg : "=r"(__tmp)); \
+//   __tmp; })
+
+
+// Use below on host machine , spike
+#include <stdio.h>
+#define kprintf(...) printf(__VA_ARGS__)
+#define kputc(c) putchar(c)
+#define kprintln(fmt, ...) do { printf(fmt, ##__VA_ARGS__); putchar('\n'); } while (0)
+#define uart_init() ((void)0)
+
+
+
 
 /////////////////////////////////////////
 // Start : JPEG File Reading Stage
@@ -742,6 +752,194 @@ static void dequantize(const Header* header, MCU* mcus) {
 // End : Dequantization Stage
 /////////////////////////////////////////
 
+/////////////////////////////////////////
+// Start : Inverse DCT Stage (genesys2)
+/////////////////////////////////////////
+
+/* Optimized inverse DCT component (port of c_version implementation).
+ * Uses the precomputed IDCT constants exposed by jpg.c (idct_get_m/idct_get_s).
+ * Operates in-place on a single 8x8 block (component array of 64 ints).
+ */
+static void inverseDCTComponent(int* component) {
+	// const float *m = idct_get_m();
+	// const float *s = idct_get_s();
+
+	const float m0 = 0.5f;
+	const float m1 = 0.5f;
+	const float m3 = 0.5f;
+	const float m5 = 0.5f;
+	const float m2 = 0.5f;
+	const float m4 = 0.5f;
+
+	const float s0 = 0.5f;
+	const float s1 = 0.5f;
+	const float s2 = 0.5f;
+	const float s3 = 0.5f;
+	const float s4 = 0.5f;
+	const float s5 = 0.5f;
+	const float s6 = 0.5f;
+	const float s7 = 0.5f;
+
+	float intermediate[64];
+
+	/* process columns */
+	for (uint i = 0; i < 8; ++i) {
+		const float g0 = component[0 * 8 + i] * s0;
+		const float g1 = component[4 * 8 + i] * s4;
+		const float g2 = component[2 * 8 + i] * s2;
+		const float g3 = component[6 * 8 + i] * s6;
+		const float g4 = component[5 * 8 + i] * s5;
+		const float g5 = component[1 * 8 + i] * s1;
+		const float g6 = component[7 * 8 + i] * s7;
+		const float g7 = component[3 * 8 + i] * s3;
+
+		const float f0 = g0;
+		const float f1 = g1;
+		const float f2 = g2;
+		const float f3 = g3;
+		const float f4 = g4 - g7;
+		const float f5 = g5 + g6;
+		const float f6 = g5 - g6;
+		const float f7 = g4 + g7;
+
+		const float e0 = f0;
+		const float e1 = f1;
+		const float e2 = f2 - f3;
+		const float e3 = f2 + f3;
+		const float e4 = f4;
+		const float e5 = f5 - f7;
+		const float e6 = f6;
+		const float e7 = f5 + f7;
+		const float e8 = f4 + f6;
+
+		const float d0 = e0;
+		const float d1 = e1;
+		const float d2 = e2 * m1;
+		const float d3 = e3;
+		const float d4 = e4 * m2;
+		const float d5 = e5 * m3;
+		const float d6 = e6 * m4;
+		const float d7 = e7;
+		const float d8 = e8 * m5;
+
+		const float c0 = d0 + d1;
+		const float c1 = d0 - d1;
+		const float c2 = d2 - d3;
+		const float c3 = d3;
+		const float c4 = d4 + d8;
+		const float c5 = d5 + d7;
+		const float c6 = d6 - d8;
+		const float c7 = d7;
+		const float c8 = c5 - c6;
+
+		const float b0 = c0 + c3;
+		const float b1 = c1 + c2;
+		const float b2 = c1 - c2;
+		const float b3 = c0 - c3;
+		const float b4 = c4 - c8;
+		const float b5 = c8;
+		const float b6 = c6 - c7;
+		const float b7 = c7;
+
+		intermediate[0 * 8 + i] = b0 + b7;
+		intermediate[1 * 8 + i] = b1 + b6;
+		intermediate[2 * 8 + i] = b2 + b5;
+		intermediate[3 * 8 + i] = b3 + b4;
+		intermediate[4 * 8 + i] = b3 - b4;
+		intermediate[5 * 8 + i] = b2 - b5;
+		intermediate[6 * 8 + i] = b1 - b6;
+		intermediate[7 * 8 + i] = b0 - b7;
+	}
+
+	/* process rows */
+	for (uint i = 0; i < 8; ++i) {
+		const float g0 = intermediate[i * 8 + 0] * s0;
+		const float g1 = intermediate[i * 8 + 4] * s4;
+		const float g2 = intermediate[i * 8 + 2] * s2;
+		const float g3 = intermediate[i * 8 + 6] * s6;
+		const float g4 = intermediate[i * 8 + 5] * s5;
+		const float g5 = intermediate[i * 8 + 1] * s1;
+		const float g6 = intermediate[i * 8 + 7] * s7;
+		const float g7 = intermediate[i * 8 + 3] * s3;
+
+		const float f0 = g0;
+		const float f1 = g1;
+		const float f2 = g2;
+		const float f3 = g3;
+		const float f4 = g4 - g7;
+		const float f5 = g5 + g6;
+		const float f6 = g5 - g6;
+		const float f7 = g4 + g7;
+
+		const float e0 = f0;
+		const float e1 = f1;
+		const float e2 = f2 - f3;
+		const float e3 = f2 + f3;
+		const float e4 = f4;
+		const float e5 = f5 - f7;
+		const float e6 = f6;
+		const float e7 = f5 + f7;
+		const float e8 = f4 + f6;
+
+		const float d0 = e0;
+		const float d1 = e1;
+		const float d2 = e2 * m1;
+		const float d3 = e3;
+		const float d4 = e4 * m2;
+		const float d5 = e5 * m3;
+		const float d6 = e6 * m4;
+		const float d7 = e7;
+		const float d8 = e8 * m5;
+
+		const float c0 = d0 + d1;
+		const float c1 = d0 - d1;
+		const float c2 = d2 - d3;
+		const float c3 = d3;
+		const float c4 = d4 + d8;
+		const float c5 = d5 + d7;
+		const float c6 = d6 - d8;
+		const float c7 = d7;
+		const float c8 = c5 - c6;
+
+		const float b0 = c0 + c3;
+		const float b1 = c1 + c2;
+		const float b2 = c1 - c2;
+		const float b3 = c0 - c3;
+		const float b4 = c4 - c8;
+		const float b5 = c8;
+		const float b6 = c6 - c7;
+		const float b7 = c7;
+
+		// kprintln("processing");
+
+		component[i * 8 + 0] = (int)(b0 + b7 + 0.5f);
+		component[i * 8 + 1] = (int)(b1 + b6 + 0.5f);
+		component[i * 8 + 2] = (int)(b2 + b5 + 0.5f);
+		component[i * 8 + 3] = (int)(b3 + b4 + 0.5f);
+		component[i * 8 + 4] = (int)(b3 - b4 + 0.5f);
+		component[i * 8 + 5] = (int)(b2 - b5 + 0.5f);
+		component[i * 8 + 6] = (int)(b1 - b6 + 0.5f);
+		component[i * 8 + 7] = (int)(b0 - b7 + 0.5f);
+	}
+}
+
+/* Perform inverse DCT on all MCUs using the optimized component function */
+static void inverseDCT(const Header* header, MCU* mcus) {
+	const uint mcuHeight = (header->height + 7) / 8;
+	const uint mcuWidth = (header->width + 7) / 8;
+	size_t total = (size_t)mcuHeight * (size_t)mcuWidth;
+	for (size_t i = 0; i < total; ++i) {
+		for (uint j = 0; j < header->numComponents; ++j) {
+			int* comp = mcu_channel_ptr(mcus, (uint)i, j);
+			if (comp != 0) inverseDCTComponent(comp);
+		}
+	}
+}
+
+/////////////////////////////////////////
+// End : Inverse DCT Stage
+/////////////////////////////////////////
+
 
 /////////////////////////////////////////
 // Start : Debugging / BMP Output Stage
@@ -920,7 +1118,11 @@ int main(void) {
 	}
 	/* Provide caller-allocated header storage to allow re-entrant usage and avoid function-static storage. */
 	static Header header_storage;
+	// long read_cycles1 = read_csr(mcycle);
 	Header *header = readJPG(&header_storage, embedded_cat, embedded_cat_size);
+	// long read_cycles2 = read_csr(mcycle);
+
+	// kprintln("JPG read cycles: %ld", read_cycles2 - read_cycles1);
 
 	if (!header) {
 		kprintln("Error - Memory error");
@@ -935,7 +1137,10 @@ int main(void) {
 	printHeader(header);
 
 	/* Huffman decode using a static MCU buffer suitable for bare-metal targets. */
+	// read_cycles1 = read_csr(mcycle);
 	MCU* mcus = decodeHuffmanData(header);
+	// read_cycles2 = read_csr(mcycle);
+	// kprintln("Huffman decode cycles: %ld", read_cycles2 - read_cycles1);
 	if (mcus == 0) {
 		kprintln("Error - Huffman decode failed");
 		header_free(header);
@@ -943,7 +1148,15 @@ int main(void) {
 	}
 
 	/* dequantization MCU coefficients (match cpp_version behavior) */
+	// read_cycles2 = read_csr(mcycle);
 	dequantize(header, mcus);
+	// read_cycles2 = read_csr(mcycle);
+	// kprintln("Dequantization cycles: %ld", read_cycles2 - read_cycles1);
+	/* inverse DCT on all MCUs (match cpp_version / c_version behavior) */
+	// read_cycles2 = read_csr(mcycle);
+	inverseDCT(header, mcus);
+	// read_cycles2 = read_csr(mcycle);
+	// kprintln("Vertical Inverse DCT cycles: %ld", read_cycles2 - read_cycles1);
 
 	/* Print BMP bytes (hex) to console. No file I/O is performed to remain bare-metal friendly. */
 	printBMP(header, mcus);

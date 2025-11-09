@@ -96,6 +96,12 @@ class RocketISBGENESYS2Config extends Config(
   new chipyard.BasicSequentialRocketConfig
 )
 
+class SmallRocketGENESYS2Config extends Config(
+  new WithFPGAFrequency(50) ++
+  new WithGENESYS2Tweaks ++
+  new chipyard.SmallRocketConfig
+)
+
 class DualRocketGENESYS2Config extends Config(
   new WithFPGAFrequency(50) ++
   new WithGENESYS2Tweaks ++

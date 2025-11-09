@@ -6,6 +6,12 @@
 
 #include "jpg.h"
 
+// #include <math.h>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 /* Define the shared MCU buffer with the capacity controlled by the
  * GENESYS2_MAX_MCUS macro (default provided in jpg.h). */
 MCU genesys2_mcus[GENESYS2_MAX_MCUS];
@@ -88,3 +94,34 @@ void header_free(Header *h) {
     if (!h) return;
     byte_array_free(&h->huffmanData);
 }
+
+/* IDCT constants and accessors ------------------------------------------------
+ * Compute once and expose pointers for decoder use. This keeps runtime
+ * overhead small on bare-metal and centralizes math usage in one place.
+ */
+// static float idct_m_arr[6]; /* m0, m1, m3, m5, m2, m4 */
+// static float idct_s_arr[8]; /* s0..s7 */
+// static int   idct_inited = 0;
+
+// void idct_init(void) {
+//     if (idct_inited) return;
+//     idct_inited = 1;
+//     idct_m_arr[0] = 2.0f * cosf(1.0f / 16.0f * 2.0f * M_PI); /* m0 */
+//     idct_m_arr[1] = 2.0f * cosf(2.0f / 16.0f * 2.0f * M_PI); /* m1 */
+//     idct_m_arr[2] = 2.0f * cosf(2.0f / 16.0f * 2.0f * M_PI); /* m3 */
+//     idct_m_arr[3] = 2.0f * cosf(3.0f / 16.0f * 2.0f * M_PI); /* m5 */
+//     idct_m_arr[4] = idct_m_arr[0] - idct_m_arr[3]; /* m2 = m0 - m5 */
+//     idct_m_arr[5] = idct_m_arr[0] + idct_m_arr[3]; /* m4 = m0 + m5 */
+
+//     idct_s_arr[0] = cosf(0.0f / 16.0f * M_PI) / sqrtf(8.0f);
+//     idct_s_arr[1] = cosf(1.0f / 16.0f * M_PI) / 2.0f;
+//     idct_s_arr[2] = cosf(2.0f / 16.0f * M_PI) / 2.0f;
+//     idct_s_arr[3] = cosf(3.0f / 16.0f * M_PI) / 2.0f;
+//     idct_s_arr[4] = cosf(4.0f / 16.0f * M_PI) / 2.0f;
+//     idct_s_arr[5] = cosf(5.0f / 16.0f * M_PI) / 2.0f;
+//     idct_s_arr[6] = cosf(6.0f / 16.0f * M_PI) / 2.0f;
+//     idct_s_arr[7] = cosf(7.0f / 16.0f * M_PI) / 2.0f;
+// }
+
+// const float* idct_get_m(void) { idct_init(); return idct_m_arr; }
+// const float* idct_get_s(void) { idct_init(); return idct_s_arr; }

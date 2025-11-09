@@ -12,6 +12,10 @@ class RocketConfig extends Config(
   new freechips.rocketchip.rocket.WithNHugeCores(1) ++         // single rocket-core
   new chipyard.config.AbstractConfig)
 
+class SmallRocketConfig extends Config(
+  new freechips.rocketchip.rocket.WithNSmallCores(1) ++         // single small rocket-core
+  new chipyard.config.AbstractConfig)
+
 class DualRocketConfig extends Config(
   new freechips.rocketchip.rocket.WithNHugeCores(2) ++
   new chipyard.config.AbstractConfig)
