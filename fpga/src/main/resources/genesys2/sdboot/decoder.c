@@ -20,6 +20,10 @@
   asm volatile ("csrr %0, " #reg : "=r"(__tmp)); \
   __tmp; })
 
+#define MSTATUS_FS_DIRTY  0x6000  // FS[14:13] = 0b11
+static inline void enable_fpu(void) {
+	asm volatile ("csrs mstatus, %0" :: "r"(MSTATUS_FS_DIRTY));
+}
 
 // Use below on host machine , spike
 // #include <stdio.h>
@@ -27,6 +31,7 @@
 // #define kputc(c) putchar(c)
 // #define kprintln(fmt, ...) do { printf(fmt, ##__VA_ARGS__); putchar('\n'); } while (0)
 // #define uart_init() ((void)0)
+// #define enable_fpu() ((void)0)
 
 
 
@@ -1107,9 +1112,8 @@ int main(void) {
 
 	uart_init();
 
-	/* Enable FPU by setting FS bits in mstatus */
-	asm volatile ("li t0, 0x6000"); // FS = 0b11 (dirty)
-	asm volatile ("csrs mstatus, t0"); // add these two lines to enable FPU
+	/* Enable FPU by setting FS bits in mstatus to 0b11 (Dirty) */
+	enable_fpu();
 	
 	/* Clear FCSR to disable FP exception traps */
 	// asm volatile ("csrwi fcsr, 0");
