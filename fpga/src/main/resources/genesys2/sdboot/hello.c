@@ -1,14 +1,20 @@
+// Use below on bare metal : comment below and add includes for platform, uart and kprintln implementations
 #include "uart.h"
 #include "kprintf.h"
 #include "platform.h"
-
-// CSR reading macros
 #define read_csr(reg) ({ unsigned long __tmp; \
   asm volatile ("csrr %0, " #reg : "=r"(__tmp)); \
   __tmp; })
 
+  // Use below on host machine , spike
+// #include <stdio.h>
+// #define kprintf(...) printf(__VA_ARGS__)
+// #define kputc(c) putchar(c)
+// #define kprintln(fmt, ...) do { printf(fmt, ##__VA_ARGS__); putchar('\n'); } while (0)
+// #define uart_init() ((void)0)
+
 int main() {
-    uart_init();
+  uart_init();
   kprintln("My Hello From Ishara its me for csr test");
 
   /* Read the hardware cycle counter CSR (mcycle) and print it */
