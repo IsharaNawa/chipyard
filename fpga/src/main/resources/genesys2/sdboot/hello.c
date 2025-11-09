@@ -1,17 +1,19 @@
 // Use below on bare metal : comment below and add includes for platform, uart and kprintln implementations
-#include "uart.h"
-#include "kprintf.h"
-#include "platform.h"
-#define read_csr(reg) ({ unsigned long __tmp; \
-  asm volatile ("csrr %0, " #reg : "=r"(__tmp)); \
-  __tmp; })
+// #include "uart.h"
+// #include "kprintf.h"
+// #include "platform.h"
+// #define read_csr(reg) ({ unsigned long __tmp; \
+//   asm volatile ("csrr %0, " #reg : "=r"(__tmp)); \
+//   __tmp; })
 
   // Use below on host machine , spike
-// #include <stdio.h>
-// #define kprintf(...) printf(__VA_ARGS__)
-// #define kputc(c) putchar(c)
-// #define kprintln(fmt, ...) do { printf(fmt, ##__VA_ARGS__); putchar('\n'); } while (0)
-// #define uart_init() ((void)0)
+#include <stdio.h>
+#include <stdint.h>
+#define kprintf(...) printf(__VA_ARGS__)
+#define kputc(c) putchar(c)
+#define kprintln(fmt, ...) do { printf(fmt, ##__VA_ARGS__); putchar('\n'); } while (0)
+#define uart_init() ((void)0)
+#define read_csr(reg) (0UL)
 
 int main() {
   uart_init();
@@ -35,7 +37,7 @@ int main() {
   kprintf("mcycle = %lx", end_cycles);
   kputc('\r'); kputc('\n');
 
-  kprintln("Number of cycles = %ld", end_cycles - start_cycles);
+  kprintln("Number of cycles new= %ld", end_cycles - start_cycles);
 
   /* Additional minimal float tests (kept small and non-invasive):
    * - print individual operands b and c bits

@@ -1,3 +1,5 @@
+source /home/ishara/Research/repos/chipyard_new/chipyard/env.sh
+
 # riscv64-unknown-elf-gcc -march=rv64g -mabi=lp64d -mcmodel=medany -O2 -I. -I./include -I./driver decoder.c jpg.c embedded_cat.c kprintf.c driver/uart.c -static  -nostdlib -Wl,-Ttext=0x80000000 -o ishara/decoder.elf
 riscv64-unknown-elf-gcc -march=rv64imaf_zicsr_zifencei -mabi=lp64f -mcmodel=medany -O2 -I. -I./include -I./driver hello.c kprintf.c driver/uart.c -static -nostdlib -Wl,-Ttext=0x80000000 -o ishara/hello.elf
 # riscv64-unknown-elf-gcc -march=rv64imaf_zicsr_zifencei -mabi=lp64f -mcmodel=medany -O2 -I. -I./include -I./driver decoder.c jpg.c embedded_cat.c kprintf.c driver/uart.c -static -nostdlib -Wl,-Ttext=0x80000000 -o ishara/decoder.elf
