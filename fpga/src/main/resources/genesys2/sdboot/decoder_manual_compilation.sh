@@ -1,8 +1,8 @@
 source /home/ishara/Research/repos/chipyard_new/chipyard/env.sh
 
 # riscv64-unknown-elf-gcc -march=rv64g -mabi=lp64d -mcmodel=medany -O2 -I. -I./include -I./driver decoder.c jpg.c embedded_cat.c kprintf.c driver/uart.c -static  -nostdlib -Wl,-Ttext=0x80000000 -o ishara/decoder.elf
-riscv64-unknown-elf-gcc -march=rv64imaf_zicsr_zifencei -mabi=lp64f -mcmodel=medany -O2 -I. -I./include -I./driver hello.c kprintf.c driver/uart.c -static -nostdlib -Wl,-Ttext=0x80000000 -o ishara/hello.elf
-# riscv64-unknown-elf-gcc -march=rv64imaf_zicsr_zifencei -mabi=lp64f -mcmodel=medany -O2 -I. -I./include -I./driver decoder.c jpg.c embedded_cat.c kprintf.c driver/uart.c -static -nostdlib -Wl,-Ttext=0x80000000 -o ishara/decoder.elf
+# riscv64-unknown-elf-gcc -march=rv64imaf_zicsr_zifencei -mabi=lp64f -mcmodel=medany -O2 -I. -I./include -I./driver hello.c kprintf.c driver/uart.c -static -nostdlib -Wl,-Ttext=0x80000000 -o ishara/hello.elf
+riscv64-unknown-elf-gcc -march=rv64imaf_zicsr_zifencei -mabi=lp64f -mcmodel=medany -O2 -msmall-data-limit=0 -I. -I./include -I./driver decoder.c jpg.c embedded_cropped_cat.c kprintf.c driver/uart.c -static -nostdlib -Wl,-Ttext=0x80000000 -o ishara/decoder.elf
 
 # riscv64-unknown-elf-gcc -march=rv64g -mabi=lp64d -mcmodel=medany -O2 -I. -I./include -I./driver decoder.c jpg.c embedded_cat.c kprintf.c driver/uart.c -static  -nostdlib -Wl,-Ttext=0x80000000 -o ishara/decoder.elf
   # -nostartfiles \            # keep bare-metal startfile behavior but allow libgcc link
@@ -15,8 +15,8 @@ riscv64-unknown-elf-gcc -march=rv64imaf_zicsr_zifencei -mabi=lp64f -mcmodel=meda
   # -static -Wl,-Ttext=0x80000000 \
   # -o ishara/decoder.elf
 
-# riscv64-unknown-elf-objcopy -O binary ishara/decoder.elf ishara/decoder.bin
-riscv64-unknown-elf-objcopy -O binary ishara/hello.elf ishara/hello.bin
+riscv64-unknown-elf-objcopy -O binary ishara/decoder.elf ishara/decoder.bin
+# riscv64-unknown-elf-objcopy -O binary ishara/hello.elf ishara/hello.bin
 
 
 lsblk /dev/sda
@@ -28,8 +28,8 @@ for m in $(lsblk -ln -o NAME,MOUNTPOINT /dev/sda | awk '$2!="" {print "/dev/"$1}
 done
 
 
-# sudo dd if=ishara/decoder.bin of=/dev/sda bs=512 seek=34 conv=notrunc status=progress
-sudo dd if=ishara/hello.bin of=/dev/sda bs=512 seek=34 conv=notrunc status=progress
+sudo dd if=ishara/decoder.bin of=/dev/sda bs=512 seek=34 conv=notrunc status=progress
+# sudo dd if=ishara/hello.bin of=/dev/sda bs=512 seek=34 conv=notrunc status=progress
 
 sync
 # sudo dd if=/dev/sda bs=512 skip=34 count=8 status=none | hexdump -C | sed -n '1,200p'
