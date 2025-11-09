@@ -762,22 +762,22 @@ static void dequantize(const Header* header, MCU* mcus) {
  */
 static void inverseDCTComponent(int* component) {
 	// Correct JPEG IDCT constants - testing with -G0 to disable sdata optimization
-	
-	const float m0 = 1.847759065f;  // 2*cos(1*pi/16) - NOT USED but declared
-	const float m1 = 1.847759065f;  // 2*cos(1*pi/16)
-	const float m3 = -1.961570560f; // -2*cos(3*pi/16)
-	const float m5 = 1.414213562f;  // sqrt(2)
-	const float m2 = 1.082392200f;  // 2*cos(3*pi/16)  
-	const float m4 = -2.613125930f; // -2*cos(1*pi/16) - sqrt(2)
 
-	const float s0 = 0.353553391f;  // 1/(2*sqrt(2))
-	const float s1 = 0.490392640f;  // cos(3*pi/8) / sqrt(2)
-	const float s2 = 0.461939766f;  // cos(2*pi/8) / sqrt(2)  
-	const float s3 = 0.415734806f;  // cos(1*pi/8) / sqrt(2)
-	const float s4 = 0.353553391f;  // 1/(2*sqrt(2))
-	const float s5 = 0.490392640f;  // cos(3*pi/8) / sqrt(2)
-	const float s6 = 0.461939766f;  // cos(2*pi/8) / sqrt(2)
-	const float s7 = 0.415734806f;  // cos(1*pi/8) / sqrt(2)
+	const float m0 = 1.84776f;  // 2*cos(1*pi/16) - NOT USED but declared
+	const float m1 = 1.41421f;  // 2*cos(1*pi/16)
+	const float m3 = 1.41421f; // -2*cos(3*pi/16)
+	const float m5 = 0.765367f;  // sqrt(2)
+	const float m2 = 1.08239f;  // 2*cos(3*pi/16)
+	const float m4 = 2.61313f; // -2*cos(1*pi/16) - sqrt(2)
+
+	const float s0 = 0.353553f;  // 1/(2*sqrt(2))
+	const float s1 = 0.490393f;  // cos(3*pi/8) / sqrt(2)
+	const float s2 = 0.461940f;  // cos(2*pi/8) / sqrt(2)
+	const float s3 = 0.415735f;  // cos(1*pi/8) / sqrt(2)
+	const float s4 = 0.353553f;  // 1/(2*sqrt(2))
+	const float s5 = 0.277785f;  // cos(3*pi/8) / sqrt(2)
+	const float s6 = 0.191342f;  // cos(2*pi/8) / sqrt(2)
+	const float s7 = 0.0975452f;  // cos(1*pi/8) / sqrt(2)
 
 	float intermediate[64];
 
@@ -1112,7 +1112,7 @@ int main(void) {
 	asm volatile ("csrs mstatus, t0"); // add these two lines to enable FPU
 	
 	/* Clear FCSR to disable FP exception traps */
-	asm volatile ("csrwi fcsr, 0");
+	// asm volatile ("csrwi fcsr, 0");
 
 	/* Initialize memory reader with embedded image bytes. */
 	if (embedded_cropped_cat_size == 0) {
