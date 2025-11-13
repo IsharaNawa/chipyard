@@ -1,5 +1,9 @@
 #include "mmio.h"
 
+#define read_csr(reg) ({ unsigned long __tmp; \
+  asm volatile ("csrr %0, " #reg : "=r"(__tmp)); \
+  __tmp; })
+
 /*************************************************************************
     Start : Defining the addresses of the SequentialISB module registers
 *************************************************************************/
@@ -660,6 +664,109 @@ void run_basic_test_suit(){
     check_for_duplicate_value_enque_and_deque_test();
 }
 
+void run_speed_test(){
+    
+    // empty the buffer
+    set_default();
+
+    printf("Running : run_speed_test\n");
+
+    uint32_t number_of_operations = 1000;
+    uint32_t capacity = ISB_DEPTH;
+    uint8_t status;
+
+    /* First calculate enquing speed */
+    // get the start time
+    uint64_t start_time = read_csr(mcycle);
+    
+    for(uint32_t i=0;i<capacity;i++){
+
+        // get the status
+        status = reg_read32(GET_ISB_STATUS) & 0b11;
+
+        // check whether the buffer can accept data
+        if(status==STATUS_FIFO_EMPTY || status==STATUS_VALID_DATA_FIFO_NOT_FULL){
+
+            // set the data
+            reg_write32(SET_ISB_INPUT_DATA, i);
+   
+        }
+    }
+
+    // get the end time
+    uint64_t end_time = read_csr(mcycle);
+
+    // calculate the total time taken
+    uint64_t total_time = end_time - start_time;
+
+    // print the time taken
+    printf("Total time taken for %d enque operations : %d cycles\n",capacity,total_time);
+    printf("Average time per enque operation : %d cycles\n",total_time/capacity);
+
+    /* Then calculate dequeing speed */
+    // get the start time
+    start_time = read_csr(mcycle);
+
+    for(uint32_t i=0;i<capacity;i++){
+        
+        // get the status
+        status = reg_read32(GET_ISB_STATUS) & 0b11;
+
+        if(status==STATUS_VALID_DATA_FIFO_FULL || status==STATUS_VALID_DATA_FIFO_NOT_FULL){
+            // get the data
+            uint32_t data = reg_read32(GET_ISB_OUTPUT_DATA);
+        }
+    }
+
+    // get the end time
+    end_time = read_csr(mcycle);
+
+    // calculate the total time taken
+    total_time = end_time - start_time;
+
+    // print the time taken
+    printf("Total time taken for %d deque operations : %d cycles\n",capacity,total_time);
+    printf("Average time per deque operation : %d cycles\n",total_time/capacity);
+
+    /* Finally calculate combined speed */
+    // get the start time
+    start_time = read_csr(mcycle);
+
+    for(uint32_t i=0;i<number_of_operations;i++){
+        // first enque data
+        // get the status
+        status = reg_read32(GET_ISB_STATUS) & 0b11;
+
+        // check whether the buffer can accept data
+        if(status==STATUS_FIFO_EMPTY || status==STATUS_VALID_DATA_FIFO_NOT_FULL){
+
+            // set the data
+            reg_write32(SET_ISB_INPUT_DATA, i);
+   
+        }
+
+        // then deque data
+        // get the status
+        status = reg_read32(GET_ISB_STATUS) & 0b11;
+
+        if(status==STATUS_VALID_DATA_FIFO_FULL || status==STATUS_VALID_DATA_FIFO_NOT_FULL){
+            // get the data
+            uint32_t data = reg_read32(GET_ISB_OUTPUT_DATA);
+        }
+    }
+
+    // get the end time
+    end_time = read_csr(mcycle);
+
+    // calculate the total time taken
+    total_time = end_time - start_time;
+
+    // print the time taken
+    printf("Total time taken for %d enque and deque operations : %d cycles\n",number_of_operations,total_time);
+    printf("Average time per enque and deque operation : %d cycles\n",total_time/(number_of_operations*2));
+}
+
+
 //--------------------------------------------------------------------------------
 //                               End : TESTING FUNCTIONS
 //--------------------------------------------------------------------------------
@@ -670,6 +777,8 @@ int main(void)
     printf("Running v4 tests...\n");
 
     run_basic_test_suit();
+
+    run_speed_test();
 
     return 0;
 }

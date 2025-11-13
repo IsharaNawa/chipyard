@@ -8,13 +8,14 @@
  * and the Header/ByteArray types from jpg.h.
  */
 
+#include <stdio.h>
 #include "jpg.h"
-#include "embedded_cropped_cat.h"
+#include "embedded_cat.h"
 
 // Use below on bear metal : uncomment below and add includes for platform, uart and kprintln implementations
-#include "uart.h"
-#include "kprintf.h"
-#include "platform.h"
+// #include "uart.h"
+// #include "kprintf.h"
+// #include "platform.h"
 
 #define read_csr(reg) ({ unsigned long __tmp; \
   asm volatile ("csrr %0, " #reg : "=r"(__tmp)); \
@@ -26,12 +27,12 @@ static inline void enable_fpu(void) {
 }
 
 // Use below on host machine , spike
-// #include <stdio.h>
-// #define kprintf(...) printf(__VA_ARGS__)
-// #define kputc(c) putchar(c)
-// #define kprintln(fmt, ...) do { printf(fmt, ##__VA_ARGS__); putchar('\n'); } while (0)
-// #define uart_init() ((void)0)
-// #define enable_fpu() ((void)0)
+
+#define kprintf(...) printf(__VA_ARGS__)
+#define kputc(c) putchar(c)
+#define kprintln(fmt, ...) do { printf(fmt, ##__VA_ARGS__); putchar('\n'); } while (0)
+#define uart_init() ((void)0)
+#define enable_fpu() ((void)0)
 
 
 /////////////////////////////////////////
@@ -1153,20 +1154,25 @@ int main(void) {
 	// asm volatile ("csrwi fcsr, 0");
 
 	/* Initialize memory reader with embedded image bytes. */
-	if (embedded_cropped_cat_size == 0) {
+	if (embedded_cat_size == 0) {
 		kprintln("Error - no embedded image data available");
 		return 1;
 	}
 	else{
-		kprintln("Embedded image data size: %d bytes", (int)embedded_cropped_cat_size);
+		kprintln("Embedded image data size: %d bytes", (int)embedded_cat_size);
 	}
 
 	/* Provide caller-allocated header storage to allow re-entrant usage and avoid function-static storage. */
 	static Header header_storage;
 
-
+	
 	/* Stage 1 : Read JPG file from embedded data into Header structure. */
-	Header *header = readJPG(&header_storage, embedded_cropped_cat, embedded_cropped_cat_size);
+	long start_cycles = read_csr(mcycle);
+	Header *header = readJPG(&header_storage, embedded_cat, embedded_cat_size);
+	long end_cycles = read_csr(mcycle);
+	long diff_cycles = end_cycles - start_cycles;
+	kprintln("JPG read cycles: %ld", diff_cycles);
+
 	if (!header) {
 		kprintln("Error - Memory error");
 		return 1;
@@ -1179,24 +1185,44 @@ int main(void) {
 	printHeader(header);
 
 	/* Stage 2 : Huffman decode using a static MCU buffer suitable for bare-metal targets. */
+	start_cycles = read_csr(mcycle);
 	MCU* mcus = decodeHuffmanData(header);
+	end_cycles = read_csr(mcycle);
+	diff_cycles = end_cycles - start_cycles;
+	kprintln("Huffman decode cycles: %ld", diff_cycles);
 	if (mcus == 0) {
 		kprintln("Error - Huffman decode failed");
 		header_free(header);
 		return 1;
 	}
 
+	const uint mcuHeight = (header->height + 7) / 8;
+	const uint mcuWidth = (header->width + 7) / 8;
+	kprintln("Decoded MCU count: %d x %d = %d", (int)mcuWidth, (int)mcuHeight, (int)(mcuWidth * mcuHeight));
+
 	/* Stage 3 : Dequantization MCU coefficients (match cpp_version behavior) */
+	start_cycles = read_csr(mcycle);
 	dequantize(header, mcus);
+	end_cycles = read_csr(mcycle);
+	diff_cycles = end_cycles - start_cycles;
+	kprintln("Dequantization cycles: %ld", diff_cycles);
 
 	/* Stage 4 : Inverse DCT on all MCUs (match cpp_version / c_version behavior) */
+	start_cycles = read_csr(mcycle);
 	inverseDCT(header, mcus);
+	end_cycles = read_csr(mcycle);
+	diff_cycles = end_cycles - start_cycles;
+	kprintln("Inverse DCT cycles: %ld", diff_cycles);
 
 	/* Stage 5 : YCbCr -> RGB conversion (produce 0..255 channels for BMP writer) */
+	start_cycles = read_csr(mcycle);
 	YCbCrToRGB(header, mcus);
+	end_cycles = read_csr(mcycle);
+	diff_cycles = end_cycles - start_cycles;
+	kprintln("YCbCr to RGB conversion cycles: %ld", diff_cycles);
 
 	/* Stage 6 : Print BMP bytes (hex) to console. No file I/O is performed to remain bare-metal friendly. */
-	printBMP(header, mcus);
+	// printBMP(header, mcus);
 
 	header_free(header);
 
