@@ -1,10 +1,10 @@
 # Uses the bash inside your Chipyard conda environment as the interpreter.
-#!/home/ishara/Research/repos/chipyard_new/chipyard/.conda-env/bin/bash
+#!/home/ishara/Research/repos/chipyard/.conda-env/bin/bash
 
 # exit immediately if any command fails
 set -e
 
-chipyard_root="$HOME/Research/repos/chipyard_new/chipyard"
+chipyard_root="$HOME/Research/repos/chipyard"
 
 # the Scala/Chisel config class for the FPGA build
 CONFIG="RocketGENESYS2Config"

@@ -5,7 +5,7 @@
 set -e
 
 # Default bitfile path
-DEFAULT_BITFILE="/home/ishara/Research/repos/chipyard_new/chipyard/fpga/bitstream_copy/RocketGENESYS2Config.bit"
+DEFAULT_BITFILE="/home/ishara/Research/repos/chipyard/fpga/bitstream_copy/RocketGENESYS2Config.bit"
 
 # Check input argument - use default if none provided
 if [ $# -eq 0 ]; then

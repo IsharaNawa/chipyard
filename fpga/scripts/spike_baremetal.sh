@@ -2,7 +2,7 @@
 # Bare-metal Spike compilation and execution script
 
 # first source the chipyard environment
-source /home/ishara/Research/repos/chipyard_new/chipyard/env.sh
+source /home/ishara/Research/repos/chipyard/env.sh
 
 # compilation variables
 CC=riscv64-unknown-elf-gcc
