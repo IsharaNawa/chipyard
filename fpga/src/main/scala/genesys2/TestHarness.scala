@@ -149,6 +149,14 @@ class GENESYS2FPGATestHarnessImp(_outer: GENESYS2FPGATestHarness) extends LazyRa
 
   childClock := referenceClock
   childReset := referenceReset
+  
+  //fan - Force fan OFF by driving pin LOW
+  val fan_pwm = IO(Output(Bool()))
+  fan_pwm.suggestName("fan_pwm")
+  _outer.xdc.addPackagePin(fan_pwm, "W19")
+  _outer.xdc.addIOStandard(fan_pwm, "LVCMOS33")
+  fan_pwm := false.B  // Drive LOW to keep fan OFF
+  
   /*
   // harness binders are non-lazy
   _outer.topDesign match { case d: HasTestHarnessFunctions =>
@@ -173,12 +181,6 @@ class GENESYS2FPGATestHarnessImp(_outer: GENESYS2FPGATestHarness) extends LazyRa
         _outer.ddrplaced.asInstanceOf[DDRGENESYS2PlacedOverlay].mig.module.reset := sys_rst
       }
   }}
-
-  //fan
-  val fan_pwm = IO(Output(Bool()))
-  _outer.xdc.addPackagePin(fan_pwm, "W19")  //pull up to 3.3v
-  _outer.xdc.addIOStandard(fan_pwm, "LVCMOS33")
-  fan_pwm := _outer.ddrplaced.asInstanceOf[DDRGENESYS2PlacedOverlay].mig.module.io.port.fan_pwm
   */
   instantiateChipTops()
 }
