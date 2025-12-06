@@ -8,14 +8,15 @@
  * and the Header/ByteArray types from jpg.h.
  */
 
-// #include <stdio.h>
+#include <stdio.h>
+#include <stddef.h>
 #include "jpg.h"
 #include "embedded_cat.h"
 
 // Use below on bear metal : uncomment below and add includes for platform, uart and kprintln implementations
-#include "uart.h"
-#include "kprintf.h"
-#include "platform.h"
+// #include "uart.h"
+// #include "kprintf.h"
+// #include "platform.h"
 
 #define read_csr(reg) ({ unsigned long __tmp; \
   asm volatile ("csrr %0, " #reg : "=r"(__tmp)); \
@@ -28,11 +29,11 @@ static inline void enable_fpu(void) {
 
 // Use below on host machine , spike
 
-// #define kprintf(...) printf(__VA_ARGS__)
-// #define kputc(c) putchar(c)
-// #define kprintln(fmt, ...) do { printf(fmt, ##__VA_ARGS__); putchar('\n'); } while (0)
-// #define uart_init() ((void)0)
-// #define enable_fpu() ((void)0)
+#define kprintf(...) printf(__VA_ARGS__)
+#define kputc(c) putchar(c)
+#define kprintln(fmt, ...) do { printf(fmt, ##__VA_ARGS__); putchar('\n'); } while (0)
+#define uart_init() ((void)0)
+#define enable_fpu() ((void)0)
 
 
 /////////////////////////////////////////
@@ -1143,6 +1144,10 @@ void printHeader(Header* header) {
 
 
 int main(void) {
+
+	/* Disable output buffering for embedded Linux */
+	setbuf(stdout, NULL);
+	setbuf(stderr, NULL);
 
 	/* Initialize UART for console output */
 	uart_init();

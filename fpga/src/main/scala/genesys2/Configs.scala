@@ -84,14 +84,26 @@ class FFTRocketGENESYS2Config extends Config(
   new chipyard.RocketConfig
 )
 
-class RocketGENESYS2Config extends Config(
-  new WithFPGAFrequency(50) ++
+class RocketGENESYS2ConfigMy extends Config(
+  new WithFPGAFrequency(80) ++
   new WithGENESYS2Tweaks ++
   new chipyard.RocketConfig
 )
 
+class TempRocketGENESYS2Config extends Config(
+  new WithFPGAFrequency(80) ++
+  new WithGENESYS2Tweaks ++
+  new chipyard.RocketConfig
+)
+
+class RocketGENESYS2ConfigMyISB extends Config(
+  new WithFPGAFrequency(80) ++
+  new WithGENESYS2Tweaks ++
+  new chipyard.BasicSequentialRocketConfig
+)
+
 class RocketISBGENESYS2Config extends Config(
-  new WithFPGAFrequency(50) ++
+  new WithFPGAFrequency(80) ++
   new WithGENESYS2Tweaks ++
   new chipyard.BasicSequentialRocketConfig
 )

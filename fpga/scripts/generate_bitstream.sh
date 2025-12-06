@@ -7,11 +7,11 @@ set -e
 chipyard_root="$HOME/Research/repos/chipyard"
 
 # the Scala/Chisel config class for the FPGA build
-CONFIG="RocketGENESYS2Config"
+CONFIG="RocketGENESYS2ConfigMyISB"
 
 # frequency of the peripheral bus clock in Hz
 # This value is passed into the bootloader build so that the UART and other peripherals are clocked correctly
-PBUS_CLK=90000000
+PBUS_CLK=80000000
 
 # Vivado output and the generated device-tree sources
 generated_dir="$chipyard_root/fpga/generated-src/chipyard.fpga.genesys2.GENESYS2FPGATestHarness.$CONFIG"
