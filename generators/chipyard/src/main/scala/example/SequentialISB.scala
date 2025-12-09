@@ -35,7 +35,7 @@ case class SequentialISBParams(
 // DOC include end: ISB params
 
 // DOC include start: ISB key
-case object SequentialISBKey extends Field[Option[SequentialISBParams]](None)
+case object SequentialISBKey extends Field[List[SequentialISBParams]](Nil)
 // DOC include end: ISB key
 
 class SequentialEnqueChannel[T <: Data](private val gen: T)  extends Bundle{
@@ -331,73 +331,34 @@ class SequentialISBTL(params:SequentialISBParams,beatBytes:Int)(implicit p: Para
 
 trait CanHavePeripherySequentialISB { this: BaseSubsystem =>
 
-  private val portName = "sequential_isb"
-
   private val pbus = locateTLBusWrapper(PBUS)
 
-  // changed this. this name cant be the same.
-  val sequential_busy = p(SequentialISBKey) match {
+  // Create multiple ISB instances based on the list
+  val sequential_busy = p(SequentialISBKey).zipWithIndex.map { case (params, i) =>
+    val portName = s"sequential_isb_$i"
 
-    case Some(params) => {
-
-      val sequential_isb = if (params.isRegFile) {
-
-        // val sequential_isb = pbus { 
-        //   LazyModule(new SequentialISBTL(params, pbus.beatBytes)(p)) 
-        // }
-
-        // pbus.coupleTo(portName) { 
-        //   sequential_isb.node := TLFragmenter(pbus.beatBytes, pbus.blockBytes) := _ 
-        // }
-
-        // sequential_isb
-
-
-        val sequential_isb = LazyModule(new SequentialISBTL(params, pbus.beatBytes)(p))
-        sequential_isb.clockNode := pbus.fixedClockNode
-        pbus.coupleTo(portName) { sequential_isb.node := TLFragmenter(pbus.beatBytes, pbus.blockBytes) := _ }
-        sequential_isb
-
-      } else {
-
-    //    val sequential_isb = pbus { 
-    //       LazyModule(new SequentialISBTL(params, pbus.beatBytes)(p)) 
-    //     }
-
-    //     pbus.coupleTo(portName) { 
-    //       sequential_isb.node := TLFragmenter(pbus.beatBytes, pbus.blockBytes) := _ 
-    //     }
-
-    //     sequential_isb
-
-        val sequential_isb = LazyModule(new SequentialISBTL(params, pbus.beatBytes)(p))
-        sequential_isb.clockNode := pbus.fixedClockNode
-        pbus.coupleTo(portName) { sequential_isb.node := TLFragmenter(pbus.beatBytes, pbus.blockBytes) := _ }
-        sequential_isb
-      }
-
-      // changed the busy signal to busy
-    //   val pbus_io = pbus { InModuleBody {
-
-    //     val busy = IO(Output(Bool()))
-
-    //     busy := sequential_isb.module.io.sequential_busy
-
-    //     busy
-    //   }}
-
-      val sequential_busy = InModuleBody {
-        val busy = IO(Output(Bool())).suggestName("sequential_busy")
-        busy := sequential_isb.module.io.sequential_busy
-        busy
-      }
-
-      Some(sequential_busy)
+    val sequential_isb = if (params.isRegFile) {
+      val sequential_isb = LazyModule(new SequentialISBTL(params, pbus.beatBytes)(p))
+      sequential_isb.clockNode := pbus.fixedClockNode
+      pbus.coupleTo(portName) { sequential_isb.node := TLFragmenter(pbus.beatBytes, pbus.blockBytes) := _ }
+      sequential_isb
+    } else {
+      val sequential_isb = LazyModule(new SequentialISBTL(params, pbus.beatBytes)(p))
+      sequential_isb.clockNode := pbus.fixedClockNode
+      pbus.coupleTo(portName) { sequential_isb.node := TLFragmenter(pbus.beatBytes, pbus.blockBytes) := _ }
+      sequential_isb
     }
-    case None => None
+
+    val sequential_busy = InModuleBody {
+      val busy = IO(Output(Bool())).suggestName(s"sequential_busy_$i")
+      busy := sequential_isb.module.io.sequential_busy
+      busy
+    }
+
+    sequential_busy
   }
 }
 
 class WithSequentialISB(isRegFile : Boolean = true, address : BigInt = 0x4000,width: Int = 32,depth: Int = 10) extends Config((site, here, up) => {
-  case SequentialISBKey => Some(SequentialISBParams(isRegFile=isRegFile,address=address,width=width,depth=depth))
+  case SequentialISBKey => up(SequentialISBKey) ++ List(SequentialISBParams(isRegFile=isRegFile,address=address,width=width,depth=depth))
 })
