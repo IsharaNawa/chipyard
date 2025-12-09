@@ -114,6 +114,18 @@ class TwoRocketCoreWithOneISBFanOffConfig extends Config(
   new chipyard.DualCoreSequentialRocketConfig
 )
 
+class ThreeRocketCoreWithTwoISB64FanOffConfig extends Config(
+  new WithFPGAFrequency(80) ++
+  new WithGENESYS2Tweaks ++
+  new chipyard.TriCoreTwoSequential64RocketConfig
+)
+
+class QuadRocketCoreWithThreeISB64FanOffConfig extends Config(
+  new WithFPGAFrequency(80) ++
+  new WithGENESYS2Tweaks ++
+  new chipyard.QuadRocketCoreWithThreeISB64FanOffConfig
+)
+
 class RocketISBGENESYS2Config extends Config(
   new WithFPGAFrequency(80) ++
   new WithGENESYS2Tweaks ++
