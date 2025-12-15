@@ -8,15 +8,15 @@
  * and the Header/ByteArray types from jpg.h.
  */
 
-#include <stdio.h>
-#include <stddef.h>
+// #include <stdio.h>
+// #include <stddef.h>
 #include "jpg.h"
 #include "embedded_cat.h"
 
 // Use below on bear metal : uncomment below and add includes for platform, uart and kprintln implementations
-// #include "uart.h"
-// #include "kprintf.h"
-// #include "platform.h"
+#include "uart.h"
+#include "kprintf.h"
+#include "platform.h"
 
 #define read_csr(reg) ({ unsigned long __tmp; \
   asm volatile ("csrr %0, " #reg : "=r"(__tmp)); \
@@ -29,11 +29,11 @@ static inline void enable_fpu(void) {
 
 // Use below on host machine , spike
 
-#define kprintf(...) printf(__VA_ARGS__)
-#define kputc(c) putchar(c)
-#define kprintln(fmt, ...) do { printf(fmt, ##__VA_ARGS__); putchar('\n'); } while (0)
-#define uart_init() ((void)0)
-#define enable_fpu() ((void)0)
+// #define kprintf(...) printf(__VA_ARGS__)
+// #define kputc(c) putchar(c)
+// #define kprintln(fmt, ...) do { printf(fmt, ##__VA_ARGS__); putchar('\n'); } while (0)
+// #define uart_init() ((void)0)
+// #define enable_fpu() ((void)0)
 
 
 /////////////////////////////////////////
@@ -1145,10 +1145,6 @@ void printHeader(Header* header) {
 
 int main(void) {
 
-	/* Disable output buffering for embedded Linux */
-	setbuf(stdout, NULL);
-	setbuf(stderr, NULL);
-
 	/* Initialize UART for console output */
 	uart_init();
 
@@ -1172,9 +1168,9 @@ int main(void) {
 
 	
 	/* Stage 1 : Read JPG file from embedded data into Header structure. */
-	long start_cycles = read_csr(mcycle);
+	long start_cycles = read_csr(cycle);
 	Header *header = readJPG(&header_storage, embedded_cat, embedded_cat_size);
-	long end_cycles = read_csr(mcycle);
+	long end_cycles = read_csr(cycle);
 	long diff_cycles = end_cycles - start_cycles;
 	kprintln("JPG read cycles: %ld", diff_cycles);
 
@@ -1190,9 +1186,9 @@ int main(void) {
 	printHeader(header);
 
 	/* Stage 2 : Huffman decode using a static MCU buffer suitable for bare-metal targets. */
-	start_cycles = read_csr(mcycle);
+	start_cycles = read_csr(cycle);
 	MCU* mcus = decodeHuffmanData(header);
-	end_cycles = read_csr(mcycle);
+	end_cycles = read_csr(cycle);
 	diff_cycles = end_cycles - start_cycles;
 	kprintln("Huffman decode cycles: %ld", diff_cycles);
 	if (mcus == 0) {
@@ -1206,28 +1202,28 @@ int main(void) {
 	kprintln("Decoded MCU count: %d x %d = %d", (int)mcuWidth, (int)mcuHeight, (int)(mcuWidth * mcuHeight));
 
 	/* Stage 3 : Dequantization MCU coefficients (match cpp_version behavior) */
-	start_cycles = read_csr(mcycle);
+	start_cycles = read_csr(cycle);
 	dequantize(header, mcus);
-	end_cycles = read_csr(mcycle);
+	end_cycles = read_csr(cycle);
 	diff_cycles = end_cycles - start_cycles;
 	kprintln("Dequantization cycles: %ld", diff_cycles);
 
 	/* Stage 4 : Inverse DCT on all MCUs (match cpp_version / c_version behavior) */
-	start_cycles = read_csr(mcycle);
+	start_cycles = read_csr(cycle);
 	inverseDCT(header, mcus);
-	end_cycles = read_csr(mcycle);
+	end_cycles = read_csr(cycle);
 	diff_cycles = end_cycles - start_cycles;
 	kprintln("Inverse DCT cycles: %ld", diff_cycles);
 
 	/* Stage 5 : YCbCr -> RGB conversion (produce 0..255 channels for BMP writer) */
-	start_cycles = read_csr(mcycle);
+	start_cycles = read_csr(cycle);
 	YCbCrToRGB(header, mcus);
-	end_cycles = read_csr(mcycle);
+	end_cycles = read_csr(cycle);
 	diff_cycles = end_cycles - start_cycles;
 	kprintln("YCbCr to RGB conversion cycles: %ld", diff_cycles);
 
 	/* Stage 6 : Print BMP bytes (hex) to console. No file I/O is performed to remain bare-metal friendly. */
-	// printBMP(header, mcus);
+	printBMP(header, mcus);
 
 	header_free(header);
 
