@@ -84,7 +84,13 @@ class FFTRocketGENESYS2Config extends Config(
   new chipyard.RocketConfig
 )
 
-class RocketGENESYS2ConfigMy extends Config(
+class RocketGENESYS2Config extends Config(
+  new WithFPGAFrequency(80) ++
+  new WithGENESYS2Tweaks ++
+  new chipyard.RocketConfig
+)
+
+class RocketGENESYS2ConfigWith80Freq extends Config(
   new WithFPGAFrequency(80) ++
   new WithGENESYS2Tweaks ++
   new chipyard.RocketConfig
@@ -130,6 +136,12 @@ class QuadRocketCoreWithThreeISB64FanOffConfig extends Config(
   new WithFPGAFrequency(80) ++
   new WithGENESYS2Tweaks ++
   new chipyard.QuadRocketCoreWithThreeISB64FanOffConfig
+)
+
+class FiveRocketCoreWithFiveISB64FanOffCSRHWEnabled80FreqConfig extends Config(
+  new WithFPGAFrequency(80) ++
+  new WithGENESYS2Tweaks ++
+  new chipyard.FiveRocketCoreWithFiveISB64FanOffConfig
 )
 
 class RocketISBGENESYS2Config extends Config(
