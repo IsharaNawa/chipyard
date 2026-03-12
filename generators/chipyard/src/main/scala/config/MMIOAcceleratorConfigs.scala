@@ -54,6 +54,24 @@ class FiveRocketCoreWithFiveISB64FanOffConfig extends Config(
   new chipyard.config.AbstractConfig)
 
 
+class FiveRocketCoreWithFiveISB64FanOff128DepthConfig extends Config(
+  new chipyard.example.WithSequentialISB(isRegFile=true,address=0x4000,depth=128) ++          // Use SequentialISB Chisel, connect Tilelink
+  new chipyard.example.WithSequentialISB(isRegFile=true,address=0x5000,depth=128) ++ 
+  new chipyard.example.WithSequentialISB(isRegFile=true,address=0x6000,depth=128) ++
+  new chipyard.example.WithSequentialISB(isRegFile=true,address=0x7000,depth=128) ++ 
+  new chipyard.example.WithSequentialISB(isRegFile=true,address=0x8000,depth=1) ++ 
+  new freechips.rocketchip.rocket.WithNBigCores(5) ++
+  new chipyard.config.AbstractConfig)
+
+class FiveRocketCoreWithFiveISB256FanOffConfig extends Config(
+  new chipyard.example.WithSequentialISB(isRegFile=true,address=0x4000,depth=256) ++          // Use SequentialISB Chisel, connect Tilelink
+  new chipyard.example.WithSequentialISB(isRegFile=true,address=0x5000,depth=256) ++ 
+  new chipyard.example.WithSequentialISB(isRegFile=true,address=0x6000,depth=256) ++
+  new chipyard.example.WithSequentialISB(isRegFile=true,address=0x7000,depth=256) ++ 
+  new chipyard.example.WithSequentialISB(isRegFile=true,address=0x8000,depth=1) ++ 
+  new freechips.rocketchip.rocket.WithNBigCores(5) ++
+  new chipyard.config.AbstractConfig)
+
 // DOC include start: GCDAXI4BlackBoxRocketConfig
 class GCDAXI4BlackBoxRocketConfig extends Config(
   new chipyard.example.WithGCD(useAXI4=true, useBlackBox=true) ++            // Use GCD blackboxed verilog, connect by AXI4->Tilelink
