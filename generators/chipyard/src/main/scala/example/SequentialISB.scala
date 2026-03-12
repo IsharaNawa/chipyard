@@ -250,15 +250,22 @@ class SequentialISBTL(params:SequentialISBParams,beatBytes:Int)(implicit p: Para
     //         RegField.r(params.width, gcd))) // read-only, gcd.ready is set on read
     // // DOC include end: GCD instance regmap
 
+        // Compute byte-aligned offsets so wide registers (e.g. 64-bit) don't overlap.
+        // Status is always 32 bits.  The enq/deq fields are params.width bits each.
+        val statusBytes = 4                                         // 32-bit status
+        val fieldBytes  = (params.width + 7) / 8                    // bytes needed per data field
+        val beatAlign   = beatBytes                                 // align to TileLink beat (typically 8)
+        val enqOffset   = ((statusBytes + beatAlign - 1) / beatAlign) * beatAlign  // first aligned offset after status
+        val deqOffset   = enqOffset + ((fieldBytes + beatAlign - 1) / beatAlign) * beatAlign // next aligned offset after enq
+
         node.regmap(
             0x00 -> Seq(
                 RegField.r(32,status)
             ),
-            0x04 -> Seq(
+            enqOffset -> Seq(
                 RegField.w(params.width,enq)
             ),
-
-            0x08 -> Seq(
+            deqOffset -> Seq(
                 RegField.r(params.width,deq)
             )
         )

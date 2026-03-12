@@ -11,7 +11,7 @@ then
     sudo apt install -y picocom
 fi
 
-DEVICE="/dev/ttyUSB0"
+DEVICE="/dev/ttyUSB1"
 BAUDRATE="115200"
 
 echo "FPGA Serial Connection Script"
