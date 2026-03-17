@@ -81,6 +81,14 @@ class FiveRocketCoreWithFiveISBWith256Depth64WidthFanOffConfig extends Config(
   new freechips.rocketchip.rocket.WithNBigCores(5) ++
   new chipyard.config.AbstractConfig)
 
+class FiveRocketCoreWithFourISBWith128Depth64WidthConfig extends Config(
+  new chipyard.example.WithSequentialISB(isRegFile=true,address=0x4000,depth=128,width=64) ++
+  new chipyard.example.WithSequentialISB(isRegFile=true,address=0x5000,depth=128,width=64) ++
+  new chipyard.example.WithSequentialISB(isRegFile=true,address=0x6000,depth=128,width=64) ++
+  new chipyard.example.WithSequentialISB(isRegFile=true,address=0x7000,depth=1) ++
+  new freechips.rocketchip.rocket.WithNBigCores(5) ++
+  new chipyard.config.AbstractConfig)
+
 // DOC include start: GCDAXI4BlackBoxRocketConfig
 class GCDAXI4BlackBoxRocketConfig extends Config(
   new chipyard.example.WithGCD(useAXI4=true, useBlackBox=true) ++            // Use GCD blackboxed verilog, connect by AXI4->Tilelink
