@@ -88,6 +88,7 @@ add_executable(hello hello.c)
 add_executable(mt-hello mt-hello.c)
 add_executable(symmetric symmetric.c)
 add_executable(SequentialISB SequentialISBV4.c)
+add_executable(rocc-isb rocc-isb.c)
 add_executable(decoder decoder.c jpg.c embedded_cat.c)
 
 #################################
@@ -128,6 +129,7 @@ add_dump_target(hello)
 add_dump_target(mt-hello)
 add_dump_target(symmetric)
 add_dump_target(SequentialISB)
+add_dump_target(rocc-isb)
 add_dump_target(decoder)
 
 

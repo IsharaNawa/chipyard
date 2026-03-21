@@ -89,6 +89,33 @@ class FiveRocketCoreWithFourISBWith128Depth64WidthConfig extends Config(
   new freechips.rocketchip.rocket.WithNBigCores(5) ++
   new chipyard.config.AbstractConfig)
 
+// ─── RoCC-based ISB configs (point-to-point, bypasses TileLink bus) ───
+
+// 2-core pipeline: Core 0 → ISB → Core 1
+class DualCoreRoCCISBRocketConfig extends Config(
+  new chipyard.example.WithRoCCISB(writerTileId=0, readerTileId=1, width=64, depth=256) ++
+  new chipyard.config.WithMultiRoCC ++
+  new freechips.rocketchip.rocket.WithNBigCores(2) ++
+  new chipyard.config.AbstractConfig)
+
+// 3-core pipeline: Core 0 → ISB → Core 1 → ISB → Core 2
+class TriCoreRoCCISBRocketConfig extends Config(
+  new chipyard.example.WithRoCCISB(writerTileId=0, readerTileId=1, width=64, depth=64) ++
+  new chipyard.example.WithRoCCISB(writerTileId=1, readerTileId=2, width=64, depth=64) ++
+  new chipyard.config.WithMultiRoCC ++
+  new freechips.rocketchip.rocket.WithNBigCores(3) ++
+  new chipyard.config.AbstractConfig)
+
+// 5-core pipeline: Core 0 → ISB → Core 1 → ... → Core 4
+class FiveCoreRoCCISBPipelineRocketConfig extends Config(
+  new chipyard.example.WithRoCCISB(writerTileId=0, readerTileId=1, width=64, depth=64) ++
+  new chipyard.example.WithRoCCISB(writerTileId=1, readerTileId=2, width=64, depth=64) ++
+  new chipyard.example.WithRoCCISB(writerTileId=2, readerTileId=3, width=64, depth=64) ++
+  new chipyard.example.WithRoCCISB(writerTileId=3, readerTileId=4, width=64, depth=64) ++
+  new chipyard.config.WithMultiRoCC ++
+  new freechips.rocketchip.rocket.WithNBigCores(5) ++
+  new chipyard.config.AbstractConfig)
+
 // DOC include start: GCDAXI4BlackBoxRocketConfig
 class GCDAXI4BlackBoxRocketConfig extends Config(
   new chipyard.example.WithGCD(useAXI4=true, useBlackBox=true) ++            // Use GCD blackboxed verilog, connect by AXI4->Tilelink

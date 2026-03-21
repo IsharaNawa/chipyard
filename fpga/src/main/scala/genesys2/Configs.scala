@@ -168,6 +168,16 @@ class FiveRocketCoreWithFiveISBWith128Depth64WidthFanOffCSRHWEnabled80FreqConfig
   new chipyard.FiveRocketCoreWithFourISBWith128Depth64WidthConfig
 )
 
+/////////////// Start ROCC ISB configs
+
+class DualCoreRoCCISBRocketGenesys2Config extends Config(
+  new WithFPGAFrequency(80) ++
+  new WithGENESYS2Tweaks ++
+  new chipyard.DualCoreRoCCISBRocketConfig 
+)
+
+/////////////// End ROCC ISB configs
+
 class RocketISBGENESYS2Config extends Config(
   new WithFPGAFrequency(80) ++
   new WithGENESYS2Tweaks ++
