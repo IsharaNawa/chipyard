@@ -89,6 +89,22 @@ class FiveRocketCoreWithFourISBWith128Depth64WidthConfig extends Config(
   new freechips.rocketchip.rocket.WithNBigCores(5) ++
   new chipyard.config.AbstractConfig)
 
+// ------------------------------------
+// Configs with RoCC ISB accelerators
+// ------------------------------------
+
+class DualCoreRoCCISBConfig extends Config(
+  new chipyard.config.WithMultiRoCC ++
+  new chipyard.example.WithRoCCISBPipeline(nCores = 2, width = 64, depth = 16) ++
+  new freechips.rocketchip.rocket.WithNBigCores(2) ++
+  new chipyard.config.AbstractConfig)
+
+class FiveCoreRoCCISBPipelineConfig extends Config(
+  new chipyard.config.WithMultiRoCC ++
+  new chipyard.example.WithRoCCISBPipeline(nCores = 5, width = 64, depth = 256) ++
+  new freechips.rocketchip.rocket.WithNBigCores(5) ++
+  new chipyard.config.AbstractConfig)
+
 // DOC include start: GCDAXI4BlackBoxRocketConfig
 class GCDAXI4BlackBoxRocketConfig extends Config(
   new chipyard.example.WithGCD(useAXI4=true, useBlackBox=true) ++            // Use GCD blackboxed verilog, connect by AXI4->Tilelink
