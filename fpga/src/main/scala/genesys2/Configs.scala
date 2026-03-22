@@ -178,6 +178,16 @@ class DualCoreRoCCISBRocketGenesys2Config extends Config(
 
 /////////////// End ROCC ISB configs
 
+/////////////// Start AccumulatorExample RoCC configs
+
+class AccumulatorRocketGenesys2Config extends Config(
+  new WithFPGAFrequency(80) ++
+  new WithGENESYS2Tweaks ++
+  new chipyard.RocketAccumulatorConfig
+)
+
+/////////////// End AccumulatorExample RoCC configs
+
 class RocketISBGENESYS2Config extends Config(
   new WithFPGAFrequency(80) ++
   new WithGENESYS2Tweaks ++

@@ -5,7 +5,7 @@
  * between a writer core and a reader core via the RoCC coprocessor interface.
  *
  * Architecture:
- *   Core 0 (ISBWriterRoCC) ──> [Queue at subsystem level] ──> Core 1 (ISBReaderRoCC)
+ *   Core 0 (ISBWriterRoCC [with data FIFO]) ──> Core 1 (ISBReaderRoCC)
  *
  * The writer core uses custom0 instructions:
  *   funct=0: blocking write (rs1 data → FIFO, stalls if full)
@@ -29,7 +29,6 @@ import chisel3.util._
 import chisel3.experimental.SourceInfo
 import org.chipsalliance.cde.config.{Parameters, Field, Config}
 import freechips.rocketchip.diplomacy._
-import freechips.rocketchip.prci._
 import freechips.rocketchip.tile._
 import freechips.rocketchip.subsystem._
 import chipyard.config.{WithMultiRoCC, MultiRoCCKey}
@@ -59,7 +58,7 @@ case class ISBSinkNode(ep: ISBEdgeParams)(implicit valName: ValName)
 // RoCC Writer Accelerator
 // ────────────────────────────────────────────────────────
 
-class ISBWriterRoCC(opcodes: OpcodeSet, val isbWidth: Int = 64)(implicit p: Parameters)
+class ISBWriterRoCC(opcodes: OpcodeSet, val isbWidth: Int = 64, val isbDepth: Int = 256)(implicit p: Parameters)
     extends LazyRoCC(opcodes, nPTWPorts = 0) {
   val isbNode = ISBSourceNode(ISBEdgeParams(isbWidth))
   override lazy val module = new ISBWriterRoCCModuleImp(this)
@@ -70,27 +69,35 @@ class ISBWriterRoCCModuleImp(outer: ISBWriterRoCC)
   val cmd = Queue(io.cmd)
   val (out, _) = outer.isbNode.out(0)
 
+  // Data FIFO lives inside the tile's clock domain (avoids ClockSinkDomain issues)
+  val dataFifo = Module(new Queue(UInt(outer.isbWidth.W), outer.isbDepth))
+
+  // Connect FIFO output to the ISBNode (which crosses tile boundary to the reader)
+  out.valid := dataFifo.io.deq.valid
+  out.bits  := dataFifo.io.deq.bits
+  dataFifo.io.deq.ready := out.ready
+
   val isWrite = cmd.bits.inst.funct === 0.U
   val isQuery = cmd.bits.inst.funct === 1.U
 
-  // Default: don't drive the FIFO
-  out.valid := false.B
-  out.bits  := cmd.bits.rs1
+  // Default: don't enqueue into the FIFO
+  dataFifo.io.enq.valid := false.B
+  dataFifo.io.enq.bits  := cmd.bits.rs1
 
   io.resp.valid    := false.B
   io.resp.bits.rd  := cmd.bits.inst.rd
-  io.resp.bits.data := out.ready  // for status query
+  io.resp.bits.data := dataFifo.io.enq.ready  // for status query
 
   cmd.ready := false.B
 
   when (isWrite) {
-    // funct=0: blocking write — push rs1 into the FIFO
-    out.valid := cmd.valid
-    cmd.ready := out.ready
+    // funct=0: blocking write — push rs1 into the data FIFO
+    dataFifo.io.enq.valid := cmd.valid
+    cmd.ready := dataFifo.io.enq.ready
   } .elsewhen (isQuery) {
     // funct=1: non-blocking status query — returns 1 if FIFO has space
     io.resp.valid := cmd.valid
-    io.resp.bits.data := out.ready
+    io.resp.bits.data := dataFifo.io.enq.ready
     cmd.ready := io.resp.fire
   }
 
@@ -143,28 +150,6 @@ class ISBReaderRoCCModuleImp(outer: ISBReaderRoCC)
 }
 
 // ────────────────────────────────────────────────────────
-// ISB Queue (instantiated at subsystem level between tiles)
-// ────────────────────────────────────────────────────────
-
-class ISBQueue(width: Int, depth: Int)(implicit p: Parameters)
-    extends ClockSinkDomain(ClockSinkParameters())(p) {
-  val sinkNode   = ISBSinkNode(ISBEdgeParams(width))
-  val sourceNode = ISBSourceNode(ISBEdgeParams(width))
-
-  override lazy val module = new ISBQueueImpl
-  class ISBQueueImpl extends Impl {
-    val (in, _)  = sinkNode.in(0)
-    val (out, _) = sourceNode.out(0)
-
-    withClockAndReset(clock, reset) {
-      val q = Module(new Queue(UInt(width.W), depth))
-      q.io.enq <> in
-      out <> q.io.deq
-    }
-  }
-}
-
-// ────────────────────────────────────────────────────────
 // Subsystem integration trait
 // ────────────────────────────────────────────────────────
 
@@ -200,11 +185,9 @@ trait CanHaveRoCCISB { this: BaseSubsystem with InstantiatesHierarchicalElements
       s"ISB channel $i: No ISBReaderRoCC on tile ${params.readerTileId}. " +
       "Ensure WithRoCCISB and WithMultiRoCC are in the config.")
 
-    val sbus = locateTLBusWrapper(SBUS)
-    val isbQueue = LazyModule(new ISBQueue(params.width, params.depth))
-    isbQueue.clockNode := sbus.fixedClockNode
-    isbQueue.sinkNode := writerRoCC.get.isbNode
-    readerRoCC.get.isbNode := isbQueue.sourceNode
+    // Direct connection: writer's ISBNode → reader's ISBNode
+    // The data FIFO lives inside ISBWriterRoCC (in the tile's clock domain)
+    readerRoCC.get.isbNode := writerRoCC.get.isbNode
   }
 }
 
@@ -242,11 +225,12 @@ class WithRoCCISB(
     val readerNeeded = !isbChannels.exists(_.readerTileId == readerTileId)
 
     val w = width
+    val d = depth
     var updated = existing
 
     if (writerNeeded) {
       updated = updated + (writerTileId -> (updated.getOrElse(writerTileId, Nil) ++ Seq(
-        (p: Parameters) => LazyModule(new ISBWriterRoCC(writerOpcode, w)(p))
+        (p: Parameters) => LazyModule(new ISBWriterRoCC(writerOpcode, w, d)(p))
       )))
     }
     if (readerNeeded) {
