@@ -1,0 +1,52 @@
+=== AccumulatorExample RoCC Test (Linux / FPGA) ===
+Opcode: custom0 (0b0001011)
+Registers: 4 x 64-bit (indices 0-3)
+
+-- 1. Basic write and read --
+  [PASS] Test  1: write 42 to reg[0], read back (got 0x2a)
+  [PASS] Test  2: write 0 to reg[0], read back (got 0x0)
+  [PASS] Test  3: write all-ones to reg[0], read back (got 0xffffffffffffffff)
+
+-- 2. All 4 registers independent --
+  [PASS] Test  4: reg[0] == 100 (got 0x64)
+  [PASS] Test  5: reg[1] == 200 (got 0xc8)
+  [PASS] Test  6: reg[2] == 300 (got 0x12c)
+  [PASS] Test  7: reg[3] == 400 (got 0x190)
+
+-- 3. Accumulate (add) --
+  [PASS] Test  8: reg[0] = 10, +5 => 15 (got 0xf)
+  [PASS] Test  9: accumulate +0 (no change) (got 0xf)
+  [PASS] Test 10: three successive +1 => 18 (got 0x12)
+
+-- 4. Accumulate across all registers --
+  [PASS] Test 11: reg[0] = 0 + 1 (got 0x1)
+  [PASS] Test 12: reg[1] = 0 + 10 (got 0xa)
+  [PASS] Test 13: reg[2] = 0 + 100 (got 0x64)
+  [PASS] Test 14: reg[3] = 0 + 1000 (got 0x3e8)
+
+-- 5. Load from memory --
+  [PASS] Test 15: load mem_data[0] (0x3421) (got 0x3421)
+  [PASS] Test 16: load mem_data[1] (0xDEADBEEF) (got 0xdeadbeef)
+  [PASS] Test 17: load mem_data[2] (0x1234567890ABCDEF) (got 0x1234567890abcdef)
+  [PASS] Test 18: load mem_data[3] (0x0) (got 0x0)
+
+-- 6. Load then accumulate --
+  [PASS] Test 19: load 0x3421 + 2 (got 0x3423)
+  [PASS] Test 20: load 0xDEADBEEF + 0x11111111 (got 0xefbed000)
+
+-- 7. Overwrite sequence --
+  [PASS] Test 21: write 999, +1 => 1000 (got 0x3e8)
+  [PASS] Test 22: load overwrites: reg[0] => 0x3421 (got 0x3421)
+
+-- 8. Large values and unsigned overflow --
+  [PASS] Test 23: 0x7FFFFFFFFFFFFFFF + 1 => 0x8000000000000000 (got 0x8000000000000000)
+  [PASS] Test 24: 0xFFFFFFFFFFFFFFFE + 1 (got 0xffffffffffffffff)
+  [PASS] Test 25: 0xFFFFFFFFFFFFFFFF + 1 (wrap to 0) (got 0x0)
+
+-- 9. Register isolation --
+  [PASS] Test 26: reg[0] unchanged after add to reg[1] (got 0xaaaaaaaaaaaaaaaa)
+  [PASS] Test 27: reg[1] accumulated (got 0xcccccccccccccccc)
+  [PASS] Test 28: reg[2] unchanged after add to reg[1] (got 0xcccccccccccccccc)
+  [PASS] Test 29: reg[3] unchanged after add to reg[1] (got 0xdddddddddddddddd)
+
+=== Results: 29/29 passed ===
