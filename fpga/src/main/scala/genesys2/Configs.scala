@@ -156,16 +156,36 @@ class FiveRocketCoreWithFiveISB256FanOffCSRHWEnabled80FreqConfig extends Config(
   new chipyard.FiveRocketCoreWithFiveISB256FanOffConfig
 )
 
+class SixRocketCoreWithFiveISB256FanOffCSRHWEnabled80FreqConfig extends Config(
+  new WithFPGAFrequency(80) ++
+  new WithGENESYS2Tweaks ++
+  new chipyard.SixRocketCoreWithFiveISBWith256Depth64WidthFanOffConfig
+)
+
+
+
 class FiveRocketCoreWithFiveISBWith256Depth64WidthFanOffCSRHWEnabled80FreqConfig extends Config(
   new WithFPGAFrequency(80) ++
   new WithGENESYS2Tweaks ++
   new chipyard.FiveRocketCoreWithFiveISBWith256Depth64WidthFanOffConfig
 )
 
+class FiveRocketCoreWithFourISBWith256Depth64WidthOneISBWith1Depth32WidthFanOffConfigCSRHWEnabled80FreqGenesys2Config extends Config(
+  new WithFPGAFrequency(80) ++
+  new WithGENESYS2Tweaks ++
+  new chipyard.FiveRocketCoreWithFourISBWith256Depth64WidthOneISBWith1Depth32WidthFanOffConfig
+)
+
 class FiveRocketCoreWithFiveISBWith128Depth64WidthFanOffCSRHWEnabled80FreqConfig extends Config(
   new WithFPGAFrequency(80) ++
   new WithGENESYS2Tweaks ++
   new chipyard.FiveRocketCoreWithFourISBWith128Depth64WidthConfig
+)
+
+class HeteroFiveCoreWithFourISBWith256Depth64WidthGenesys2Config extends Config(
+  new WithFPGAFrequency(80) ++
+  new WithGENESYS2Tweaks ++
+  new chipyard.HeteroFiveCoreWithFourISBWith256Depth64WidthConfig
 )
 
 /////////////// Start ROCC ISB configs
