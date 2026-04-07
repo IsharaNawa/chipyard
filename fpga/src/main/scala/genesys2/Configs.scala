@@ -176,6 +176,12 @@ class FiveRocketCoreWithFourISBWith256Depth64WidthOneISBWith1Depth32WidthFanOffC
   new chipyard.FiveRocketCoreWithFourISBWith256Depth64WidthOneISBWith1Depth32WidthFanOffConfig
 )
 
+class FiveRocketCoreWithFourISBUsingBRAMWith256Depth64WidthOneISBUsingBRAMWith1Depth32WidthFanOffConfigCSRHWEnabled80FreqGenesys2Config extends Config(
+  new WithFPGAFrequency(80) ++
+  new WithGENESYS2Tweaks ++
+  new chipyard.FiveRocketCoreWithFourISBUsingBRAMWith256Depth64WidthOneISBUsingBRAMWith1Depth32WidthFanOffConfig
+)
+
 class FiveRocketCoreWithFiveISBWith128Depth64WidthFanOffCSRHWEnabled80FreqConfig extends Config(
   new WithFPGAFrequency(80) ++
   new WithGENESYS2Tweaks ++

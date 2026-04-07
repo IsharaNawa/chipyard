@@ -165,6 +165,95 @@ class SequentialRegFifo(val w: Int, depth: Int) extends Module with HasSequentia
   io.count := itemCounter
 }
 
+// BRAM-based circular buffer FIFO
+// Uses SyncReadMem which synthesises to Block RAM (BRAM) on Xilinx FPGAs.
+// A 1-entry output register handles the 1-cycle synchronous read latency.
+class SequentialBramFifo(val w: Int, depth: Int) extends Module with HasSequentialISBIO {
+
+  require(depth >= 2, "BRAM FIFO depth must be at least 2")
+
+  def counter(depth: Int, incr: Bool): (UInt, UInt) = {
+    val cntReg = RegInit(0.U(log2Ceil(depth).W))
+    val nextVal = Mux(cntReg === (depth-1).U, 0.U, cntReg + 1.U)
+    when (incr) {
+      cntReg := nextVal
+    }
+    (cntReg, nextVal)
+  }
+
+  // BRAM storage — SyncReadMem maps to Block RAM during synthesis
+  val mem = SyncReadMem(depth, UInt(w.W))
+
+  val incrRead = WireInit(false.B)
+  val incrWrite = WireInit(false.B)
+  val (readPtr, nextRead) = counter(depth, incrRead)
+  val (writePtr, nextWrite) = counter(depth, incrWrite)
+
+  val emptyReg = RegInit(true.B)
+  val fullReg = RegInit(false.B)
+  val itemCounter = RegInit(0.U(30.W))
+
+  // Output prefetch register (handles 1-cycle BRAM read latency)
+  val outReg = Reg(UInt(w.W))
+  val outValid = RegInit(false.B)
+
+  // BRAM read pipeline: data arrives one cycle after read is issued
+  val doDeqBram = Wire(Bool())
+  val bramReadFired = RegNext(doDeqBram, false.B)
+  val bramReadData = mem.read(readPtr, doDeqBram)
+
+  // Enqueue: write to BRAM when producer has data and FIFO not full
+  val doEnq = !fullReg && io.enq.valid
+  when (doEnq) {
+    mem.write(writePtr, io.enq.bits)
+    incrWrite := true.B
+  }
+
+  // Dequeue from BRAM: issue read when output stage can accept new data.
+  // outputBusy accounts for both buffered data and in-flight BRAM reads
+  // so that the prefetch register is never overwritten before being consumed.
+  val outputBusy = outValid || bramReadFired
+  doDeqBram := !emptyReg && (!outputBusy || io.deq.consumer_ready)
+  when (doDeqBram) {
+    incrRead := true.B
+  }
+
+  // Update empty/full flags and item counter.
+  // Handle all cases: enq-only, deq-only, both, neither.
+  when (doEnq && !doDeqBram) {
+    emptyReg := false.B
+    fullReg := nextWrite === readPtr
+    itemCounter := itemCounter + 1.U
+  } .elsewhen (!doEnq && doDeqBram) {
+    fullReg := false.B
+    emptyReg := nextRead === writePtr
+    itemCounter := itemCounter - 1.U
+  } .elsewhen (doEnq && doDeqBram) {
+    // Both pointers advance; count and flags unchanged
+    emptyReg := false.B
+    fullReg := false.B
+  }
+
+  // Output buffer: load from BRAM read result, or clear on consumer accept
+  when (bramReadFired) {
+    outReg := bramReadData
+    when (io.deq.consumer_ready) {
+      outValid := false.B   // pass-through: consumer takes data immediately
+    } .otherwise {
+      outValid := true.B    // buffer data until consumer is ready
+    }
+  } .elsewhen (io.deq.consumer_ready && outValid) {
+    outValid := false.B     // consumer takes buffered data
+  }
+
+  // Output connections
+  io.deq.bits := Mux(bramReadFired, bramReadData, outReg)
+  io.deq.valid := outValid || bramReadFired
+  io.enq.fifo_ready := !fullReg
+  // Total count = items in BRAM + item in output stage (if any)
+  io.count := itemCounter + (outValid || bramReadFired).asUInt
+}
+
 class SequentialISBTopIO extends Bundle{
     val sequential_busy = Output(Bool())
     // val deq_busy = Output(Bool())
@@ -204,8 +293,7 @@ class SequentialISBTL(params:SequentialISBParams,beatBytes:Int)(implicit p: Para
         val impl = if(params.isRegFile){
             Module(new SequentialRegFifo(params.width,params.depth))
         }else{
-            // TODO : change this according to other variations
-            Module(new SequentialRegFifo(params.width,params.depth))
+            Module(new SequentialBramFifo(params.width,params.depth))
         }
 
         // impl_io.clock := clock

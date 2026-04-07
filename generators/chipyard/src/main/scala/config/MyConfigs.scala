@@ -75,6 +75,15 @@ class FiveRocketCoreWithFourISBWith256Depth64WidthOneISBWith1Depth32WidthFanOffC
   new freechips.rocketchip.rocket.WithNBigCores(5) ++
   new chipyard.config.AbstractConfig)
 
+class FiveRocketCoreWithFourISBUsingBRAMWith256Depth64WidthOneISBUsingBRAMWith1Depth32WidthFanOffConfig extends Config(
+  new chipyard.example.WithSequentialISB(isRegFile=false,address=0x4000,depth=256,width=64) ++          // Use SequentialISB Chisel, connect Tilelink
+  new chipyard.example.WithSequentialISB(isRegFile=false,address=0x5000,depth=256,width=64) ++ 
+  new chipyard.example.WithSequentialISB(isRegFile=false,address=0x6000,depth=256,width=64) ++
+  new chipyard.example.WithSequentialISB(isRegFile=false,address=0x7000,depth=256,width=64) ++ 
+  new chipyard.example.WithSequentialISB(isRegFile=false,address=0x8000,depth=2) ++ 
+  new freechips.rocketchip.rocket.WithNBigCores(5) ++
+  new chipyard.config.AbstractConfig)
+
 class SixRocketCoreWithFiveISBWith256Depth64WidthFanOffConfig extends Config(
   new chipyard.example.WithSequentialISB(isRegFile=true,address=0x4000,depth=256,width=64) ++          // Use SequentialISB Chisel, connect Tilelink
   new chipyard.example.WithSequentialISB(isRegFile=true,address=0x5000,depth=256,width=64) ++ 
