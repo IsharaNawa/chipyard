@@ -244,6 +244,23 @@ class SingleBigRocketWithoutFPUGenesys2Config extends Config(
   new chipyard.SingleBigRocketWithoutFPUConfig
 )
 
+// ------------------------------
+// A/B configs to measure MulDiv (M extension) area cost on Genesys2.
+// Both have FPU removed so the only difference between the two bitstreams is the MulDiv unit.
+// ------------------------------
+
+class SingleBigRocketNoFPUWithMulDivGenesys2Config extends Config(
+  new WithFPGAFrequency(80) ++
+  new WithGENESYS2Tweaks ++
+  new chipyard.SingleBigRocketNoFPUWithMulDivConfig
+)
+
+class SingleBigRocketNoFPUWithoutMulDivGenesys2Config extends Config(
+  new WithFPGAFrequency(80) ++
+  new WithGENESYS2Tweaks ++
+  new chipyard.SingleBigRocketNoFPUWithoutMulDivConfig
+)
+
 class RocketISBGENESYS2Config extends Config(
   new WithFPGAFrequency(80) ++
   new WithGENESYS2Tweaks ++

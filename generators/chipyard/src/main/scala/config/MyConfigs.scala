@@ -1,6 +1,13 @@
 package chipyard
 
 import org.chipsalliance.cde.config.{Config}
+import freechips.rocketchip.rocket.{RocketCoreConfig}
+
+// Local fragment: strip the integer multiplier/divider (M extension).
+// Resulting ISA on every Rocket tile present in the config becomes RV64I (+A if you keep atomics).
+// WARNING: Linux, OpenSBI, U-Boot, and glibc all require the M extension.
+// Use only for area-measurement experiments or for handwritten -march=rv64i bare-metal binaries.
+class WithoutMulDiv extends RocketCoreConfig(_.copy(mulDiv = None))
 
 // ------------------------------
 // Start : Configs with Sequential ISB accelerators
@@ -210,4 +217,29 @@ class SingleBigRocketWithoutFPUConfig extends Config(
 
 // ------------------------------
 // End : A/B configs to measure FPU area cost on Genesys2
+// ------------------------------
+
+// ------------------------------
+// Start : A/B configs to measure MulDiv (M extension) area cost on Genesys2
+// Two single-core BigRocket configs, identical except for the integer mul/div unit.
+// Both have FPU REMOVED so that any utilization delta is attributable purely to MulDiv.
+// (Keeping FPU in would not work without MulDiv since the FPU's int<->FP paths reference the int pipeline,
+//  and conceptually we want to isolate just the M-extension hardware.)
+// ------------------------------
+
+// Baseline: 1 BigRocket core, no FPU, default fast MulDiv (mulUnroll=8, early-out divider).
+class SingleBigRocketNoFPUWithMulDivConfig extends Config(
+  new freechips.rocketchip.rocket.WithoutFPU ++
+  new freechips.rocketchip.rocket.WithNBigCores(1) ++
+  new chipyard.config.AbstractConfig)
+
+// Stripped: 1 BigRocket core, no FPU, MulDiv removed (ISA = RV64IA, M extension gone).
+class SingleBigRocketNoFPUWithoutMulDivConfig extends Config(
+  new chipyard.WithoutMulDiv ++
+  new freechips.rocketchip.rocket.WithoutFPU ++
+  new freechips.rocketchip.rocket.WithNBigCores(1) ++
+  new chipyard.config.AbstractConfig)
+
+// ------------------------------
+// End : A/B configs to measure MulDiv area cost on Genesys2
 // ------------------------------
