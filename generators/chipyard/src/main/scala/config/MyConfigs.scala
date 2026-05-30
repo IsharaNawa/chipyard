@@ -187,3 +187,27 @@ class RocketAccumulatorConfig extends Config(
 // ------------------------------
 // End : Configs with AccumulatorExample RoCC
 // ------------------------------
+
+// ------------------------------
+// Start : A/B configs to measure FPU area cost on Genesys2
+// Two single-core BigRocket configs, identical except for the FPU.
+// Generate both bitstreams and compare Vivado utilization reports.
+// ------------------------------
+
+// Baseline: 1 BigRocket core with the default FPU (RV64GC).
+class SingleBigRocketWithFPUConfig extends Config(
+  new freechips.rocketchip.rocket.WithNBigCores(1) ++
+  new chipyard.config.AbstractConfig)
+
+// Stripped: 1 BigRocket core with FPU removed (RV64IMA only).
+// `WithoutFPU` is a RocketCoreConfig that applies to all Rocket tiles
+// already present in the config, so it must appear AFTER WithNBigCores
+// in evaluation order, which in Chipyard's ++ chains means BEFORE it in source.
+class SingleBigRocketWithoutFPUConfig extends Config(
+  new freechips.rocketchip.rocket.WithoutFPU ++
+  new freechips.rocketchip.rocket.WithNBigCores(1) ++
+  new chipyard.config.AbstractConfig)
+
+// ------------------------------
+// End : A/B configs to measure FPU area cost on Genesys2
+// ------------------------------

@@ -226,6 +226,24 @@ class AccumulatorRocketGenesys2Config extends Config(
 
 /////////////// End AccumulatorExample RoCC configs
 
+// ------------------------------
+// A/B configs to measure FPU area cost on Genesys2.
+// Both run at the same FPGA frequency and use identical Genesys2 tweaks,
+// so any utilization delta in the Vivado report comes from the FPU.
+// ------------------------------
+
+class SingleBigRocketWithFPUGenesys2Config extends Config(
+  new WithFPGAFrequency(80) ++
+  new WithGENESYS2Tweaks ++
+  new chipyard.SingleBigRocketWithFPUConfig
+)
+
+class SingleBigRocketWithoutFPUGenesys2Config extends Config(
+  new WithFPGAFrequency(80) ++
+  new WithGENESYS2Tweaks ++
+  new chipyard.SingleBigRocketWithoutFPUConfig
+)
+
 class RocketISBGENESYS2Config extends Config(
   new WithFPGAFrequency(80) ++
   new WithGENESYS2Tweaks ++
