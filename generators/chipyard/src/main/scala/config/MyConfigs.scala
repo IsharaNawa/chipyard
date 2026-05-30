@@ -91,6 +91,19 @@ class FiveRocketCoreWithFourISBUsingBRAMWith256Depth64WidthOneISBUsingBRAMWith1D
   new freechips.rocketchip.rocket.WithNBigCores(5) ++
   new chipyard.config.AbstractConfig)
 
+// Interrupt-capable counterpart of the above. Uses WithSequentialISBWithIRQ which
+// routes two PLIC interrupt lines per ISB (NOT_EMPTY, NOT_FULL) so cores can sleep
+// in WFI / blocking UIO read instead of busy-polling the status register.
+// Thresholds default to depth/4 (auto when 0) to add hysteresis.
+class FiveRocketCoreWithFourISBUsingBRAMWith256Depth64WidthOneISBUsingBRAMWith1Depth32WidthFanOffWithIRQConfig extends Config(
+  new chipyard.example.WithSequentialISBWithIRQ(isRegFile=false,address=0x4000,depth=256,width=64) ++
+  new chipyard.example.WithSequentialISBWithIRQ(isRegFile=false,address=0x5000,depth=256,width=64) ++
+  new chipyard.example.WithSequentialISBWithIRQ(isRegFile=false,address=0x6000,depth=256,width=64) ++
+  new chipyard.example.WithSequentialISBWithIRQ(isRegFile=false,address=0x7000,depth=256,width=64) ++
+  new chipyard.example.WithSequentialISBWithIRQ(isRegFile=false,address=0x8000,depth=2) ++
+  new freechips.rocketchip.rocket.WithNBigCores(5) ++
+  new chipyard.config.AbstractConfig)
+
 class FiveRocketCoreWithFourISBUsingBRAMWith512Depth64WidthOneISBUsingBRAMWith1Depth32WidthFanOffConfig extends Config(
   new chipyard.example.WithSequentialISB(isRegFile=false,address=0x4000,depth=512,width=64) ++          // Use SequentialISB Chisel, connect Tilelink
   new chipyard.example.WithSequentialISB(isRegFile=false,address=0x5000,depth=512,width=64) ++ 
