@@ -32,3 +32,4 @@ project/project/
 tests/build/
 fpga/apps/mmio_isb_pipelined_apps/
 fpga/generated-src_copy/
+chipyard-genesys2-boot/
