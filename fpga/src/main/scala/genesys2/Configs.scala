@@ -182,14 +182,15 @@ class FiveRocketCoreWithFourISBUsingBRAMWith256Depth64WidthOneISBUsingBRAMWith1D
   new chipyard.FiveRocketCoreWithFourISBUsingBRAMWith256Depth64WidthOneISBUsingBRAMWith1Depth32WidthFanOffConfig
 )
 
-// Interrupt-capable variant of the above. Each ISB exposes two PLIC interrupt
-// lines (NOT_EMPTY, NOT_FULL) so isolated worker cores can use UIO blocking
-// reads + WFI instead of busy-polling. Same FIFO depths/widths as the
-// polling-mode baseline so utilization deltas reflect only the IRQ logic.
-class FiveRocketCoreWithFourISBUsingBRAMWith256Depth64WidthOneISBUsingBRAMWith1Depth32WidthFanOffWithIRQ80FreqGenesys2Config extends Config(
+// Interrupt-aware MMIO FIFO variant of the polling-mode baseline. Each ISB
+// exposes two PLIC interrupt lines (producer_wake, consumer_wake) plus
+// software-tunable watermarks, letting isolated worker cores use UIO blocking
+// reads + WFI instead of busy-polling. Debug counters are enabled so we can
+// measure the wake/pending event mix at runtime.
+class FiveRocketCoreFourInterruptAwareMMIOFIFOUsingBRAMWithDebugEnabledWithDepth256Size64Genesys2With80FreqConfig extends Config(
   new WithFPGAFrequency(80) ++
   new WithGENESYS2Tweaks ++
-  new chipyard.FiveRocketCoreWithFourISBUsingBRAMWith256Depth64WidthOneISBUsingBRAMWith1Depth32WidthFanOffWithIRQConfig
+  new chipyard.FiveRocketCoreFourInterruptAwareMMIOFIFOUsingBRAMWithDebugEnabledWithDepth256Size64
 )
 
 class FiveRocketCoreWithFourISBUsingBRAMWith512Depth64WidthOneISBUsingBRAMWith1Depth32WidthFanOffConfigCSRHWEnabled80FreqGenesys2Config extends Config(

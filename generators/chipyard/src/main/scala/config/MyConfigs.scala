@@ -91,16 +91,17 @@ class FiveRocketCoreWithFourISBUsingBRAMWith256Depth64WidthOneISBUsingBRAMWith1D
   new freechips.rocketchip.rocket.WithNBigCores(5) ++
   new chipyard.config.AbstractConfig)
 
-// Interrupt-capable counterpart of the above. Uses WithSequentialISBWithIRQ which
-// routes two PLIC interrupt lines per ISB (NOT_EMPTY, NOT_FULL) so cores can sleep
-// in WFI / blocking UIO read instead of busy-polling the status register.
-// Thresholds default to depth/4 (auto when 0) to add hysteresis.
-class FiveRocketCoreWithFourISBUsingBRAMWith256Depth64WidthOneISBUsingBRAMWith1Depth32WidthFanOffWithIRQConfig extends Config(
-  new chipyard.example.WithSequentialISBWithIRQ(isRegFile=false,address=0x4000,depth=256,width=64) ++
-  new chipyard.example.WithSequentialISBWithIRQ(isRegFile=false,address=0x5000,depth=256,width=64) ++
-  new chipyard.example.WithSequentialISBWithIRQ(isRegFile=false,address=0x6000,depth=256,width=64) ++
-  new chipyard.example.WithSequentialISBWithIRQ(isRegFile=false,address=0x7000,depth=256,width=64) ++
-  new chipyard.example.WithSequentialISBWithIRQ(isRegFile=false,address=0x8000,depth=2) ++
+// Interrupt-aware MMIO FIFO variant of the above. Uses WithInterruptAwareMMIOFIFO
+// (see InterruptAwareMMIOFIFO.scala) which routes two PLIC interrupt lines per
+// ISB (producer_wake, consumer_wake) so cores can sleep in WFI / blocking UIO
+// read instead of busy-polling the status register. Watermarks default to
+// depth (producer high), depth*3/4 (producer low), depth/4 (consumer high), 0
+// (consumer low) — overrideable from software via MMIO.
+class FiveRocketCoreFourInterruptAwareMMIOFIFOUsingBRAMWithDebugEnabledWithDepth256Size64 extends Config(
+  new chipyard.example.WithInterruptAwareMMIOFIFO(isRegFile=false,address=0x4000,depth=256,width=64,isDebug=true) ++
+  new chipyard.example.WithInterruptAwareMMIOFIFO(isRegFile=false,address=0x5000,depth=256,width=64,isDebug=true) ++
+  new chipyard.example.WithInterruptAwareMMIOFIFO(isRegFile=false,address=0x6000,depth=256,width=64,isDebug=true) ++
+  new chipyard.example.WithInterruptAwareMMIOFIFO(isRegFile=false,address=0x7000,depth=256,width=64,isDebug=true) ++
   new freechips.rocketchip.rocket.WithNBigCores(5) ++
   new chipyard.config.AbstractConfig)
 
