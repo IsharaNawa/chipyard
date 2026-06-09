@@ -182,6 +182,8 @@ class InterruptAwareMMIOFIFOTL(params: InterruptAwareMMIOFIFOParams, beatBytes: 
       val producerWaitReq = Wire(Decoupled(UInt(1.W)))
       producerWaitReq.ready := true.B
       val producerWaitFire = producerWaitReq.valid
+      // correction for the debug counter, use carefully as it changes the FSM
+      //val producerWaitFire = producerWaitReq.valid && !RegNext(producerWaitReq.valid, false.B)
 
       // Falling crossing detector: count transitions (> low) -> (<= low)
       val countLEProducerLow     = countWide <= producerLowWM.pad(cmpW)
@@ -215,6 +217,8 @@ class InterruptAwareMMIOFIFOTL(params: InterruptAwareMMIOFIFOParams, beatBytes: 
       val consumerWaitReq = Wire(Decoupled(UInt(1.W)))
       consumerWaitReq.ready := true.B
       val consumerWaitFire = consumerWaitReq.valid
+      // correction for the debug counter, use carefully as it changes the FSM
+      //val consumerWaitFire = consumerWaitReq.valid && !RegNext(consumerWaitReq.valid, false.B)
 
       // Rising crossing detector: count transitions (< high) -> (>= high)
       val countGEConsumerHigh     = countWide >= consumerHighWM.pad(cmpW)
