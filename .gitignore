@@ -33,3 +33,4 @@ tests/build/
 fpga/apps/mmio_isb_pipelined_apps/
 fpga/generated-src_copy/
 chipyard-genesys2-boot/
+fpga/apps/interrupt_aware_mmio_apps/

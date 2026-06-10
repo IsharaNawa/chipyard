@@ -7,7 +7,7 @@ set -e
 chipyard_root="$HOME/Research/repos/chipyard"
 
 # the Scala/Chisel config class for the FPGA build
-CONFIG="FiveRocketCoreFourInterruptAwareMMIOFIFOUsingBRAMWithDebugEnabledWithDepth256Size64Genesys2With80FreqConfig"
+CONFIG="FiveRocketCoreFourInterruptAwareMMIOFIFOUsingBRAMWithDebugEnabledWithDepth512Size64Genesys2With80FreqConfig"
 
 # frequency of the peripheral bus clock in Hz
 # This value is passed into the bootloader build so that the UART and other peripherals are clocked correctly

@@ -105,6 +105,14 @@ class FiveRocketCoreFourInterruptAwareMMIOFIFOUsingBRAMWithDebugEnabledWithDepth
   new freechips.rocketchip.rocket.WithNBigCores(5) ++
   new chipyard.config.AbstractConfig)
 
+class FiveRocketCoreFourInterruptAwareMMIOFIFOUsingBRAMWithDebugEnabledWithDepth512Size64 extends Config(
+  new chipyard.example.WithInterruptAwareMMIOFIFO(isRegFile=false,address=0x4000,depth=512,width=64,isDebug=true) ++
+  new chipyard.example.WithInterruptAwareMMIOFIFO(isRegFile=false,address=0x5000,depth=512,width=64,isDebug=true) ++
+  new chipyard.example.WithInterruptAwareMMIOFIFO(isRegFile=false,address=0x6000,depth=512,width=64,isDebug=true) ++
+  new chipyard.example.WithInterruptAwareMMIOFIFO(isRegFile=false,address=0x7000,depth=512,width=64,isDebug=true) ++
+  new freechips.rocketchip.rocket.WithNBigCores(5) ++
+  new chipyard.config.AbstractConfig)
+
 class FiveRocketCoreWithFourISBUsingBRAMWith512Depth64WidthOneISBUsingBRAMWith1Depth32WidthFanOffConfig extends Config(
   new chipyard.example.WithSequentialISB(isRegFile=false,address=0x4000,depth=512,width=64) ++          // Use SequentialISB Chisel, connect Tilelink
   new chipyard.example.WithSequentialISB(isRegFile=false,address=0x5000,depth=512,width=64) ++ 
