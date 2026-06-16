@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash -n timing_test.sh)",
+      "Bash(make)",
+      "Bash(make clean *)"
+    ]
+  }
+}
